@@ -2,13 +2,68 @@
 Script for reading WWAs and NCFR catalog csv files. Checks to see if time matches for flash flood events
 '''
 import datetime as dt
+import numpy as np 
 from statistics import mean 
 
-# def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time):
-# First figure out an appropriate threshold... you will need to justify this in your thesis!
-# also the NCFR catalog is weird... if the end time is past 00:00 it will still be considered the same date
-# also review FF criteria... because FF be issued well after NCFR has passed
-# review what type of urban flooding you're look at in yo thesis
+
+def adjustNCFRtime(ncfr_start_hours, ncfr_end_hours):
+  # Create array to store boolean values
+  is_overnight = []
+
+  # Loop through ncfr start and end hours 
+  for i, hour in enumerate(ncfr_start_hours):
+    # Check if the end time is "less" than the start time
+    if ncfr_start_hours[i] < ncfr_end_hours[i]:
+      is_overnight.append(1) # True for overnight spillover
+    else:
+      is_overnight.append(0) # False for overnight spillover
+
+  is_overnight = np.array(is_overnight, dtype = 'bool') 
+  
+  return is_overnight 
+
+def isMonthEnd(ncfr_month, ncfr_day):
+  # Initialize variables; variables check whether month and day could mean end of month
+  right_day = False
+  right_month = False
+
+  # Check if day could entail the "end of month"
+  if ncfr_day == 28 or ncfr_day == 30 or ncfr_day == 31:
+    right_day = True
+
+  # Check if the day is the end of the month for that specific month
+  if right_day:
+    # Check if the month is February
+    if ncfr_month == 2:
+      right_month = True
+
+    # Check order months, whether a month has 30 or 31 days gets swapped in August
+    if ncfr_month <= 7:
+      # Jan/Mar/May/July has 31 days
+      if ncfr_month % 2 == 1 and ncfr_day == 31:
+        right_month = True 
+      # April/June has 30 days
+      elif ncfr_month % 2 == 0 and ncfr_day == 30:
+        right_month = True
+    elif ncfr_month >= 8:
+      # Aug/Oct/Dec has 31 days
+      if ncfr_month % 2 == 0 and ncfr_day == 31:
+        right_month = True
+      # Sept/Nov has 30 days
+      elif ncfr_month % 2 == 1 and ncfr_day = 30:
+        right_month = True
+
+  # If month and day correspond to end of month, they return True
+  if right_day and right_month:
+    return True
+  else:
+    return False
+
+
+# def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, ff_threshold):
+  # also the NCFR catalog is weird... if the end time is past 00:00 it will still be considered the same date
+  # review what type of urban flooding you're look at in yo thesis
+
 
 def main():
   wwa_fp = './data/WWA_All_1995_2020.csv'
@@ -79,10 +134,32 @@ def main():
     except:
       continue 
 
-  test1 = dt.datetime(2020, 2, 16, 5, 30)
-  test2 = dt.datetime(2020, 2, 16, 8, 40)
+  # Call is_overnight to check if NCFR end time is on the next day of the start time
+  overnighters = adjustNCFRtime(ncfr_start_hours, ncfr_end_hours)
+  print(type(ncfr_days[0])) 
 
-  
+  # Loop through overnighters, reorganize datetime? consider making datetime function 
+  for i, overnighter in enumerate(overnighters):
+    ncfr_start_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i], ncfr_start_hours[i])
+    ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i], ncfr_end_hours[i]) 
+
+    # Check if the NCFR end hour is on the following day of the start time
+    if overnighter:
+      print("Initial: ", ncfr_end_time)
+
+      if isMonthEnd(ncfr_month[i], ncfr_day[i]) == True:
+        # Set to 1st day of the next month
+        ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i] + 1, 1, ncfr_end_hours[i])
+      else:
+        # Set to next day (add 1 day)
+        ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i] + 1, ncfr_end_hours[i])
+      
+      print("Final: ", ncfr_end_time)
+
+    # Call isNCFRwithinFF function
+
+  test1 = dt.datetime(2020, 2, 16, 5, 30)
+  test2 = dt.datetime(2020, 2, 16, 8, 40) 
    
 
 if __name__ == '__main__':
