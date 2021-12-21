@@ -50,7 +50,7 @@ def isMonthEnd(ncfr_month, ncfr_day):
       if ncfr_month % 2 == 0 and ncfr_day == 31:
         right_month = True
       # Sept/Nov has 30 days
-      elif ncfr_month % 2 == 1 and ncfr_day = 30:
+      elif ncfr_month % 2 == 1 and ncfr_day == 30:
         right_month = True
 
   # If month and day correspond to end of month, they return True
@@ -59,11 +59,16 @@ def isMonthEnd(ncfr_month, ncfr_day):
   else:
     return False
 
+def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, ff_threshold):
+  FF_end_bound = FF_end_time + ff_threshold
+  isFFNCFR = []
 
-# def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, ff_threshold):
-  # also the NCFR catalog is weird... if the end time is past 00:00 it will still be considered the same date
-  # review what type of urban flooding you're look at in yo thesis
+  if NCFR_start_time <= FF_end_bound and NCFR_end_time <= FF_end_bound:
+    isFFNCFR.append("True")
+  else: 
+    isFFNCFR.append("False") 
 
+  return isFFNCFR
 
 def main():
   wwa_fp = './data/WWA_All_1995_2020.csv'
@@ -111,8 +116,8 @@ def main():
         ff_time_sum += ff_length 
 
   # Find the mean of the flash flood warning time lengths to get the "threshold" 
-  ff_treshold = ff_time_sum / len(ff_time_lengths)
-    
+  ff_threshold = ff_time_sum / len(ff_time_lengths)
+
   # Lists to obtain from the NCFR file
   ncfr_years = []
   ncfr_months = []
@@ -136,7 +141,6 @@ def main():
 
   # Call is_overnight to check if NCFR end time is on the next day of the start time
   overnighters = adjustNCFRtime(ncfr_start_hours, ncfr_end_hours)
-  print(type(ncfr_days[0])) 
 
   # Loop through overnighters, reorganize datetime? consider making datetime function 
   for i, overnighter in enumerate(overnighters):
@@ -145,21 +149,16 @@ def main():
 
     # Check if the NCFR end hour is on the following day of the start time
     if overnighter:
-      print("Initial: ", ncfr_end_time)
-
-      if isMonthEnd(ncfr_month[i], ncfr_day[i]) == True:
+      if isMonthEnd(ncfr_months[i], ncfr_days[i]) == True:
         # Set to 1st day of the next month
         ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i] + 1, 1, ncfr_end_hours[i])
       else:
         # Set to next day (add 1 day)
         ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i] + 1, ncfr_end_hours[i])
-      
-      print("Final: ", ncfr_end_time)
 
-    # Call isNCFRwithinFF function
-
-  test1 = dt.datetime(2020, 2, 16, 5, 30)
-  test2 = dt.datetime(2020, 2, 16, 8, 40) 
+  for i, time_length in ff_time_lengths:
+    # Write code here
+    # Call isFFwithinNCFR function for matching days 
    
 
 if __name__ == '__main__':
