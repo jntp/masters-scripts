@@ -156,10 +156,24 @@ def main():
         # Set to next day (add 1 day)
         ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i] + 1, ncfr_end_hours[i])
 
-  for i, time_length in ff_time_lengths:
-    # Write code here
-    # Call isFFwithinNCFR function for matching days 
-   
+  ncfr_months = np.array(ncfr_months)
+  ncfr_days = np.array(ncfr_days) 
+
+  for i, time_length in enumerate(ff_time_lengths):
+    # Call isFFwithinNCFR function for matching days
+    # Match ff_start_time with ncfr_start_time and plus 1 day
+    ff_month = ff_start_datetimes[i].month
+    ff_day = ff_start_datetimes[i].day
+
+    match_months = np.where(ncfr_months == ff_month)[0]
+    match_days = np.where(ncfr_days == ff_day)[0]
+
+    match_dates = np.isin(match_months, match_days)
+    # left off here
+    # print((np.isin(match_months, match_days)).any())
+
+    # this is confusing... figure this out!
+ 
 
 if __name__ == '__main__':
   main()
