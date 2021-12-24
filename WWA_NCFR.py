@@ -59,6 +59,33 @@ def isMonthEnd(ncfr_month, ncfr_day):
   else:
     return False
 
+def createDateTimes(ncfr_years, ncfr_months, ncfr_days, ncfr_start_hours, ncfr_end_hours):
+  # Initialize lists
+  ncfr_start_times = []
+  ncfr_end_times = [] 
+
+  # Call is_overnight to check if NCFR end time is on the next day of the start time
+  overnighters = adjustNCFRtime(ncfr_start_hours, ncfr_end_hours)
+
+  # Loop through overnighters, reorganize datetime? consider making datetime function 
+  for i, overnighter in enumerate(overnighters):
+    ncfr_start_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i], ncfr_start_hours[i])
+    ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i], ncfr_end_hours[i]) 
+
+    # Check if the NCFR end hour is on the following day of the start time
+    if overnighter:
+      if isMonthEnd(ncfr_months[i], ncfr_days[i]) == True:
+        # Set to 1st day of the next month
+        ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i] + 1, 1, ncfr_end_hours[i])
+      else:
+        # Set to next day (add 1 day)
+        ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i] + 1, ncfr_end_hours[i])
+
+    ncfr_start_times.append(ncfr_start_time)
+    ncfr_end_times.append(ncfr_end_time)
+
+  return ncfr_start_times, ncfr_end_times 
+
 def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, ff_threshold):
   FF_end_bound = FF_end_time + ff_threshold
   isFFNCFR = []
@@ -135,26 +162,13 @@ def main():
       ncfr_months.append(int(components_ncfr[2]))
       ncfr_days.append(int(components_ncfr[3]))
       ncfr_start_hours.append(int(components_ncfr[4]))
-      ncfr_end_hours.append(int(components_ncfr[5]))
+      ncfr_end_hours.append(int(components_ncfr[5])) 
     except:
       continue 
 
-  # Call is_overnight to check if NCFR end time is on the next day of the start time
-  overnighters = adjustNCFRtime(ncfr_start_hours, ncfr_end_hours)
-
-  # Loop through overnighters, reorganize datetime? consider making datetime function 
-  for i, overnighter in enumerate(overnighters):
-    ncfr_start_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i], ncfr_start_hours[i])
-    ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i], ncfr_end_hours[i]) 
-
-    # Check if the NCFR end hour is on the following day of the start time
-    if overnighter:
-      if isMonthEnd(ncfr_months[i], ncfr_days[i]) == True:
-        # Set to 1st day of the next month
-        ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i] + 1, 1, ncfr_end_hours[i])
-      else:
-        # Set to next day (add 1 day)
-        ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i] + 1, ncfr_end_hours[i])
+  # Create ncfr datetimes
+  ncfr_start_datetimes, ncfr_end_datetimes = createDateTimes(ncfr_years, ncfr_months, ncfr_days, ncfr_start_hours, \
+      ncfr_end_hours)
 
   ncfr_months = np.array(ncfr_months)
   ncfr_days = np.array(ncfr_days) 
@@ -165,10 +179,15 @@ def main():
     ff_month = ff_start_datetimes[i].month
     ff_day = ff_start_datetimes[i].day
 
-    match_months = np.where(ncfr_months == ff_month)[0]
-    match_days = np.where(ncfr_days == ff_day)[0]
-
-    match_dates = np.isin(match_months, match_days)
+    match_ind_months = np.where(ncfr_months == ff_month)[0]
+    match_ind_days = np.where(ncfr_days == ff_day)[0]
+    match_ind_dates = np.isin(match_ind_months, match_ind_days)
+    
+    if match_ind_dates.any():
+      match_dates = match_ind_months[match_ind_dates] 
+      print(ncfr_start_datetimes[match_dates]) # you left off here (see error message) 
+      # Extract ncfr datetime based on indices
+  
     # left off here
     # print((np.isin(match_months, match_days)).any())
 
