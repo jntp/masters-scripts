@@ -93,12 +93,10 @@ def createDateTimes(ncfr_years, ncfr_months, ncfr_days, ncfr_start_hours, ncfr_e
 
 def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, ff_threshold):
   FF_end_bound = FF_end_time + ff_threshold
-  isFFNCFR = []
+  isFFNCFR = False
 
   if NCFR_start_time <= FF_end_bound and NCFR_end_time <= FF_end_bound:
-    isFFNCFR.append("True")
-  else: 
-    isFFNCFR.append("False") 
+    isFFNCFR = True
 
   return isFFNCFR
 
@@ -182,21 +180,36 @@ def main():
   ncfr_months = np.array(ncfr_months)
   ncfr_days = np.array(ncfr_days) 
   ncfr_if_ff = [] # stores True/False on whether ncfr is associated with flash flood warning
+  ncfr_ff_start_times = [] # string list that stores starting datetimes of associated FFWs
+  ncfr_ff_end_times = [] # string list that stores ending datetimes of associated FFWs
 
-  print(ff_start_dates) 
   # Outline
   # Search in ff_start_time where start_time month and day match ncfr one
   for i, ncfr_start_date in enumerate(ncfr_start_dates):
     match_flag = False
+    ncfr_ff_start_time = "N/A"
+    ncfr_ff_end_time = "N/A" 
 
     # Call isFFwithinNCFR function for matching days
     # Match ff_start_time with ncfr_start_time 
     for j, ff_start_date in enumerate(ff_start_dates): 
       if ff_start_date == ncfr_start_date or ff_start_date == ncfr_end_dates[i]:
-        # Call Function isFFwithinNCFR
-        print("Match", i)  
+        match_flag = isFFwithinNCFR(ff_start_datetimes[j], ff_end_datetimes[j], ncfr_start_datetimes[i], \
+            ncfr_end_datetimes[i], ff_threshold)
+        
+        if match_flag == True:
+          ncfr_ff_start_time = str(ff_start_datetimes[j])
+          ncfr_ff_end_time = str(ff_end_datetimes[j])
+
+    ncfr_if_ff.append(match_flag) 
+    ncfr_ff_start_times.append(ncfr_ff_start_time)
+    ncfr_ff_end_times.append(ncfr_ff_end_time)
+
+  # Print to csv file
+
 
 if __name__ == '__main__':
   main()
 
- 
+
+
