@@ -5,7 +5,8 @@ import datetime as dt
 import numpy as np 
 from statistics import mean
 from array import * 
-
+from csv import writer
+from csv import reader
 
 def adjustNCFRtime(ncfr_start_hours, ncfr_end_hours):
   # Create array to store boolean values
@@ -100,9 +101,27 @@ def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, f
 
   return isFFNCFR
 
+def add_column_in_csv(input_file, output_file, transform_row):
+  # Open input file in read mode and output file in write mode
+  with open(input_file, 'r') as read_obj, open(output_file, 'w', newline='') as write_obj:
+    # Create a csv reader object from input file
+    csv_reader = reader(read_obj)
+
+    # Create a csv writer object from output file
+    csv_writer = writer(write_obj)
+
+    # Read each row of the input csv file as list
+    for row in csv_reader:
+      # Transform the row to "column" 
+      transform_row(row, csv_reader.line_num)
+
+      # Write "row" to output file
+      csv_writer.writerow(row) 
+
 def main():
   wwa_fp = './data/WWA_All_1995_2020.csv'
   NCFR_fp = './data/NCFR_Catalog.csv'
+  out_fp = './output/NCFR_Catalog_updated.csv'
 
   # Collect WWA data 
   wwa_file = open(wwa_fp, 'r')
@@ -206,6 +225,11 @@ def main():
     ncfr_ff_end_times.append(ncfr_ff_end_time)
 
   # Print to csv file
+  header1 = "Associated_FFW"
+
+  add_column_in_csv(NCFR_fp, out_fp, lambda row, i: \
+      row.append(header1) if i == 1 else row.append(ncfr_if_ff[i - 1]))
+  
 
 
 if __name__ == '__main__':
