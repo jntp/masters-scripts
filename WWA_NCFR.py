@@ -1,6 +1,7 @@
 '''
 Script for reading WWAs and NCFR catalog csv files. Checks to see if time matches for flash flood events
 '''
+import os
 import datetime as dt
 import numpy as np 
 from statistics import mean
@@ -14,8 +15,9 @@ def adjustNCFRtime(ncfr_start_hours, ncfr_end_hours):
 
   # Loop through ncfr start and end hours 
   for i, hour in enumerate(ncfr_start_hours):
+    # print(ncfr_start_hours[i], ncfr_end_hours[i]) 
     # Check if the end time is "less" than the start time
-    if ncfr_start_hours[i] < ncfr_end_hours[i]:
+    if ncfr_start_hours[i] > ncfr_end_hours[i]:
       is_overnight.append(1) # True for overnight spillover
     else:
       is_overnight.append(0) # False for overnight spillover
@@ -57,8 +59,10 @@ def isMonthEnd(ncfr_month, ncfr_day):
 
   # If month and day correspond to end of month, they return True
   if right_day and right_month:
+    # print(right_day, right_month) 
     return True
   else:
+    # print(right_day, right_month) 
     return False
 
 def createDateTimes(ncfr_years, ncfr_months, ncfr_days, ncfr_start_hours, ncfr_end_hours):
@@ -83,7 +87,7 @@ def createDateTimes(ncfr_years, ncfr_months, ncfr_days, ncfr_start_hours, ncfr_e
         ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i] + 1, 1, ncfr_end_hours[i])
       else:
         # Set to next day (add 1 day)
-        ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i] + 1, ncfr_end_hours[i])
+        ncfr_end_time = dt.datetime(ncfr_years[i], ncfr_months[i], ncfr_days[i] + 1, ncfr_end_hours[i]) 
 
     ncfr_start_times.append(ncfr_start_time)
     ncfr_end_times.append(ncfr_end_time)
@@ -96,7 +100,7 @@ def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, f
   FF_end_bound = FF_end_time + ff_threshold
   isFFNCFR = False
 
-  if NCFR_start_time <= FF_end_bound and NCFR_end_time <= FF_end_bound:
+  if NCFR_start_time < FF_start_time and NCFR_end_time <= FF_end_bound:
     isFFNCFR = True
 
   return isFFNCFR
@@ -121,7 +125,10 @@ def add_column_in_csv(input_file, output_file, transform_row):
 def main():
   wwa_fp = './data/WWA_All_1995_2020.csv'
   NCFR_fp = './data/NCFR_Catalog.csv'
-  out_fp = './output/NCFR_Catalog_updated.csv'
+  new_fp1 = './output/NCFR_Catalog_1.csv'
+  new_fp2 = './output/NCFR_Catalog_2.csv'
+  new_fp3 = './output/NCFR_Catalog_3.csv' 
+  new_fp4 = './output/NCFR_Catalog_final.csv' 
 
   # Collect WWA data 
   wwa_file = open(wwa_fp, 'r')
@@ -136,6 +143,7 @@ def main():
   ncfr_file.close() 
 
   # Lists to obtain from the WWA file
+  ff_WFOs = []
   ff_start_datetimes = [] 
   ff_end_datetimes = []
   ff_start_dates = []
@@ -159,6 +167,7 @@ def main():
       except:
         continue
       else:
+        ff_WFOs.append(components[0]) 
         ff_start_datetimes.append(start_datetime) 
         ff_end_datetimes.append(end_datetime)
         ff_start_dates.append(start_datetime.date())
@@ -169,7 +178,7 @@ def main():
         ff_time_sum += ff_length 
 
   # Find the mean of the flash flood warning time lengths to get the "threshold" 
-  ff_threshold = ff_time_sum / len(ff_time_lengths)
+  ff_threshold = ff_time_sum / len(ff_time_lengths) 
 
   # Lists to obtain from the NCFR file
   ncfr_years = []
@@ -201,6 +210,7 @@ def main():
   ncfr_if_ff = [] # stores True/False on whether ncfr is associated with flash flood warning
   ncfr_ff_start_times = [] # string list that stores starting datetimes of associated FFWs
   ncfr_ff_end_times = [] # string list that stores ending datetimes of associated FFWs
+  ncfr_ff_WFOs = [] # indicates which weather forecasting office (LOX/SGX) issued the FFW
 
   # Outline
   # Search in ff_start_time where start_time month and day match ncfr one
@@ -208,6 +218,7 @@ def main():
     match_flag = False
     ncfr_ff_start_time = "N/A"
     ncfr_ff_end_time = "N/A" 
+    ncfr_ff_WFO = "N/A"
 
     # Call isFFwithinNCFR function for matching days
     # Match ff_start_time with ncfr_start_time 
@@ -219,21 +230,33 @@ def main():
         if match_flag == True:
           ncfr_ff_start_time = str(ff_start_datetimes[j])
           ncfr_ff_end_time = str(ff_end_datetimes[j])
+          ncfr_ff_WFO = ff_WFOs[j]
 
     ncfr_if_ff.append(match_flag) 
     ncfr_ff_start_times.append(ncfr_ff_start_time)
     ncfr_ff_end_times.append(ncfr_ff_end_time)
+    ncfr_ff_WFOs.append(ncfr_ff_WFO) 
 
   # Print to csv file
   header1 = "Associated_FFW"
+  header2 = "FFW_Start_Time"
+  header3 = "FFW_End_Time" 
+  header4 = "WFO" 
 
-  add_column_in_csv(NCFR_fp, out_fp, lambda row, i: \
-      row.append(header1) if i == 1 else row.append(ncfr_if_ff[i - 1]))
-  
+  add_column_in_csv(NCFR_fp, new_fp1, lambda row, line_num: \
+      row.append(header1) if line_num == 1 else row.append(ncfr_if_ff[line_num - 2]))
+  add_column_in_csv(new_fp1, new_fp2, lambda row, line_num: \
+      row.append(header2) if line_num == 1 else row.append(ncfr_ff_start_times[line_num - 2]))
+  add_column_in_csv(new_fp2, new_fp3, lambda row, line_num: \
+      row.append(header3) if line_num == 1 else row.append(ncfr_ff_end_times[line_num - 2]))
+  add_column_in_csv(new_fp3, new_fp4, lambda row, line_num: \
+      row.append(header4) if line_num == 1 else row.append(ncfr_ff_WFOs[line_num - 2]))
 
+  os.remove(new_fp1)
+  os.remove(new_fp2) 
+  os.remove(new_fp3) 
 
 if __name__ == '__main__':
   main()
 
-
-
+# Fix problem regarding multiple FFWs/NCFRs in one day...
