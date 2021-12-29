@@ -96,11 +96,11 @@ def createDateTimes(ncfr_years, ncfr_months, ncfr_days, ncfr_start_hours, ncfr_e
 
   return ncfr_start_times, ncfr_end_times, ncfr_start_dates, ncfr_end_dates
 
-def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, ff_threshold):
+def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, FF_status, ff_threshold):
   FF_end_bound = FF_end_time + ff_threshold
   isFFNCFR = False
-
-  if NCFR_start_time < FF_start_time and NCFR_end_time <= FF_end_bound:
+ 
+  if FF_start_time > NCFR_start_time and FF_start_time <= FF_end_bound and "NEW" in FF_status: 
     isFFNCFR = True
 
   return isFFNCFR
@@ -148,7 +148,8 @@ def main():
   ff_end_datetimes = []
   ff_start_dates = []
   ff_end_dates = [] 
-  ff_time_lengths = [] 
+  ff_time_lengths = []
+  ff_statuses = [] 
 
   # Initialize stored variables
   ff_time_sum = dt.timedelta() # start with a duration of 0:00:00; used as sum for mean calculation
@@ -156,7 +157,7 @@ def main():
   for line in wwa_lines:
     components = line.split(",")
     # 1 = year, 2 = month, 3 = day, 4 = hour, 5 = min for start times
-    # 6 = year, 7, = month, 8 = day, 9 = hour, 10 = min for end times
+    # 6 = year, 7, = month, 8 = day, 9 = hour, 10 = min for end times, 12 for status
 
     if 'FF' in components:
       try:
@@ -172,13 +173,14 @@ def main():
         ff_end_datetimes.append(end_datetime)
         ff_start_dates.append(start_datetime.date())
         ff_end_dates.append(end_datetime.date())
+        ff_statuses.append(components[12]) 
 
         ff_length = end_datetime - start_datetime
         ff_time_lengths.append(ff_length)
         ff_time_sum += ff_length 
 
   # Find the mean of the flash flood warning time lengths to get the "threshold" 
-  ff_threshold = ff_time_sum / len(ff_time_lengths) 
+  ff_threshold = ff_time_sum / len(ff_time_lengths)  
 
   # Lists to obtain from the NCFR file
   ncfr_years = []
@@ -210,7 +212,7 @@ def main():
   ncfr_if_ff = [] # stores True/False on whether ncfr is associated with flash flood warning
   ncfr_ff_start_times = [] # string list that stores starting datetimes of associated FFWs
   ncfr_ff_end_times = [] # string list that stores ending datetimes of associated FFWs
-  ncfr_ff_WFOs = [] # indicates which weather forecasting office (LOX/SGX) issued the FFW
+  ncfr_ff_WFOs = [] # indicates which weather forecasting office (LOX/SGX) issued the FFW 
 
   # Outline
   # Search in ff_start_time where start_time month and day match ncfr one
@@ -225,12 +227,13 @@ def main():
     for j, ff_start_date in enumerate(ff_start_dates): 
       if ff_start_date == ncfr_start_date or ff_start_date == ncfr_end_dates[i]:
         match_flag = isFFwithinNCFR(ff_start_datetimes[j], ff_end_datetimes[j], ncfr_start_datetimes[i], \
-            ncfr_end_datetimes[i], ff_threshold)
+            ncfr_end_datetimes[i], ff_statuses[j], ff_threshold)
         
         if match_flag == True:
           ncfr_ff_start_time = str(ff_start_datetimes[j])
           ncfr_ff_end_time = str(ff_end_datetimes[j])
           ncfr_ff_WFO = ff_WFOs[j]
+          break # end search process for current NCFR event and continue to next event
 
     ncfr_if_ff.append(match_flag) 
     ncfr_ff_start_times.append(ncfr_ff_start_time)
@@ -259,4 +262,5 @@ def main():
 if __name__ == '__main__':
   main()
 
-# Fix problem regarding multiple FFWs/NCFRs in one day...
+# Basically works finish annotating code....
+# Write disclaimer in readme (related to WFO geospatial stuff) 
