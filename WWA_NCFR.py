@@ -10,6 +10,11 @@ from csv import writer
 from csv import reader
 
 def adjustNCFRtime(ncfr_start_hours, ncfr_end_hours):
+  """
+  Check if NCFR event spans more than 1 day (goes overnight). Returns bool array.
+
+  """
+
   # Create array to store boolean values
   is_overnight = []
 
@@ -27,6 +32,10 @@ def adjustNCFRtime(ncfr_start_hours, ncfr_end_hours):
   return is_overnight 
 
 def isMonthEnd(ncfr_month, ncfr_day):
+  """
+  Check if given month and day is the last day of the month. Returns bool value.
+  """
+
   # Initialize variables; variables check whether month and day could mean end of month
   right_day = False
   right_month = False
@@ -66,6 +75,11 @@ def isMonthEnd(ncfr_month, ncfr_day):
     return False
 
 def createDateTimes(ncfr_years, ncfr_months, ncfr_days, ncfr_start_hours, ncfr_end_hours):
+  """
+  Creates NCFR datetimes given year, month, day, start hour, and end hour. Returns four arrays consisting of
+  datetimes--which including two that are the dates only (no hour/minutes). 
+  """
+
   # Initialize lists
   ncfr_start_times = []
   ncfr_end_times = []
@@ -97,6 +111,10 @@ def createDateTimes(ncfr_years, ncfr_months, ncfr_days, ncfr_start_hours, ncfr_e
   return ncfr_start_times, ncfr_end_times, ncfr_start_dates, ncfr_end_dates
 
 def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, FF_status, ff_threshold):
+  """
+  Checks if a flash flood warning is issued within a time bounds of an NCFR. Returns a bool value.
+  """
+
   FF_end_bound = FF_end_time + ff_threshold
   isFFNCFR = False
  
@@ -106,6 +124,10 @@ def isFFwithinNCFR(FF_start_time, FF_end_time, NCFR_start_time, NCFR_end_time, F
   return isFFNCFR
 
 def add_column_in_csv(input_file, output_file, transform_row):
+  """
+  Adds a column to an existing csv file
+  """
+
   # Open input file in read mode and output file in write mode
   with open(input_file, 'r') as read_obj, open(output_file, 'w', newline='') as write_obj:
     # Create a csv reader object from input file
@@ -123,6 +145,7 @@ def add_column_in_csv(input_file, output_file, transform_row):
       csv_writer.writerow(row) 
 
 def main():
+  # Specify file paths 
   wwa_fp = './data/WWA_All_1995_2020.csv'
   NCFR_fp = './data/NCFR_Catalog.csv'
   new_fp1 = './output/NCFR_Catalog_1.csv'
@@ -149,10 +172,11 @@ def main():
   ff_start_dates = []
   ff_end_dates = [] 
   ff_time_lengths = []
-  ff_statuses = [] 
+  ff_statuses = []
 
   # Initialize stored variables
   ff_time_sum = dt.timedelta() # start with a duration of 0:00:00; used as sum for mean calculation
+  num_FFWs = 0 # counts the total number of FFWs assoicated with NCFRs
 
   for line in wwa_lines:
     components = line.split(",")
@@ -233,6 +257,10 @@ def main():
           ncfr_ff_start_time = str(ff_start_datetimes[j])
           ncfr_ff_end_time = str(ff_end_datetimes[j])
           ncfr_ff_WFO = ff_WFOs[j]
+          num_FFWs += 1
+
+          # Note: Remove break below if searching for num_FFWs and its proportion
+          # INCLUDE break if searching for num_NCFRs and its proportion
           break # end search process for current NCFR event and continue to next event
 
     ncfr_if_ff.append(match_flag) 
@@ -240,12 +268,24 @@ def main():
     ncfr_ff_end_times.append(ncfr_ff_end_time)
     ncfr_ff_WFOs.append(ncfr_ff_WFO) 
 
+  # Get NCFR and FFW statistics
+  prop_FFWs = num_FFWs / len(ff_start_datetimes) # proportion of FFWs associated with NCFRs
+  num_NCFRs = sum(ncfr_if_ff) # number of "True" values
+  prop_NCFRs = num_NCFRs / len(ncfr_start_datetimes)
+
+  # Print Statistics
+  print("Number of FFWs linked with NCFRs: ", num_FFWs) 
+  print("Proportion of FFWs linked with NCFRs: ", prop_FFWs)
+  print("Number of NCFRs linked with FFWs ", num_NCFRs)
+  print("Proportion of NCFRs linked with FFWs ", prop_NCFRs) 
+
   # Print to csv file
   header1 = "Associated_FFW"
   header2 = "FFW_Start_Time"
   header3 = "FFW_End_Time" 
   header4 = "WFO" 
 
+  # Add columns to CSV files
   add_column_in_csv(NCFR_fp, new_fp1, lambda row, line_num: \
       row.append(header1) if line_num == 1 else row.append(ncfr_if_ff[line_num - 2]))
   add_column_in_csv(new_fp1, new_fp2, lambda row, line_num: \
@@ -255,12 +295,11 @@ def main():
   add_column_in_csv(new_fp3, new_fp4, lambda row, line_num: \
       row.append(header4) if line_num == 1 else row.append(ncfr_ff_WFOs[line_num - 2]))
 
+  # Remove earlier versions of CSV files 
   os.remove(new_fp1)
   os.remove(new_fp2) 
   os.remove(new_fp3) 
 
 if __name__ == '__main__':
   main()
-
-# Basically works finish annotating code....
-# Write disclaimer in readme (related to WFO geospatial stuff) 
+ 
