@@ -10,22 +10,13 @@ def check_unit_time(unit_time):
 
   return unit_time_str
 
-def check_overnight(start_hour, end_hour):
+def isOvernight(start_hour, end_hour):
   is_overnight = False
 
   if start_hour > end_hour:
     is_overnight = True
 
   return is_overnight
-
-def create_date_fp(year, month, day):
-  year_fp = str(year)
-  month_fp = check_unit_time(month)
-  day_fp = check_unit_time(day)
-
-  date_fp = year_fp + month_fp + day_fp
-
-  return year_fp, date_fp
 
 def isMonthEnd(year, month, day):
   # Initialize variables; variables check whether month and day could mean end of month
@@ -66,8 +57,39 @@ def isMonthEnd(year, month, day):
     # print(right_day, right_month) 
     return False
 
-
 ## Main Functions
+
+def create_date_fp(year, month, day):
+  year_fp = str(year)
+  month_fp = check_unit_time(month)
+  day_fp = check_unit_time(day)
+
+  date_fp = year_fp + month_fp + day_fp
+
+  return year_fp, date_fp
+
+def reformat_time(date_fp, year, month, day, start_hour, end_hour):
+  # Check if the NCFR goes overnight
+  if isOvernight(start_hour, end_hour):
+    # Check if the first day of the NCFR event is at month's end
+    if isMonthEnd(year, month, day):
+      # Check if the month is December
+      # If that's the case, add a new year and set month/day to Jan 1
+      year += 1
+      month = 1
+      day = 1
+    else:
+      # Simply add a new day
+      day += 1
+
+    # Modify the date_fp given new time parameters
+    year_fp, date_fp = create_date_fp(year, month, day)
+
+    # Return modified date_fp
+    return date_fp
+  else:
+    # Return the date_fp unmodified 
+    return date_fp 
 
 def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
   """
@@ -89,19 +111,23 @@ def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
   faux_end_hour = end_hour # will be used to determine when the while loop below will stop
 
   # Add hours to 24 if the NCFR ends overnight
-  if check_overnight(start_hour, end_hour):
+  if isOvernight(start_hour, end_hour):
     faux_end_hour = 24 + end_hour
-    ## Call function to fix the day
 
   # Retrieve data from each QPE file, so long as the file remains within the NCFR hours
   while (current_faux_hour <= faux_end_hour):
+    # Check if the time reaches midnight, change the date and current_hour
     if current_hour == 24:
+      # Reformat the date 
+      date_fp = reformat_time(date_fp, year, month, day, start_hour, end_hour)
+
+      # Set the current hour to zero (24-hr time restart)
       current_hour = 0
 
     hour_fp = check_unit_time(current_hour) 
     fp = source_fp + stage_fp + "." + date_fp + hour_fp + "." + type_fp
 
-    grbs = pyrgrib.open(fp) 
+    grbs = pygrib.open(fp) 
     grb = grbs.message(1)
     data, lats, lons = grb.data(lat1 = 32, lat2 = 36, lon1 = -121, lon2 = -114)
     print(data[0], lats[0], lons[0])
@@ -110,6 +136,7 @@ def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
     current_faux_hour += 1
 
   return data, lats, lons
+
 
 def main(): 
   # source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/QPE Data/2002/"
