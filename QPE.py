@@ -1,5 +1,6 @@
 import pygrib
 import pandas as pd
+from netCDF4 import Dataset
 
 ## Auxiliary functions
 def check_unit_time(unit_time):
@@ -75,9 +76,14 @@ def reformat_time(date_fp, year, month, day, start_hour, end_hour):
     if isMonthEnd(year, month, day):
       # Check if the month is December
       # If that's the case, add a new year and set month/day to Jan 1
-      year += 1
-      month = 1
-      day = 1
+      if month == 12:
+        year += 1
+        month = 1
+        day = 1
+      else:
+        # If not December, add 1 to month and set day equal 1
+        month += 1
+        day = 1
     else:
       # Simply add a new day
       day += 1
@@ -85,11 +91,11 @@ def reformat_time(date_fp, year, month, day, start_hour, end_hour):
     # Modify the date_fp given new time parameters
     year_fp, date_fp = create_date_fp(year, month, day)
 
-    # Return modified date_fp
-    return date_fp
+    # Return modified date_fp and year (data sorted by years)
+    return year_fp, date_fp
   else:
     # Return the date_fp unmodified 
-    return date_fp 
+    return year_fp, date_fp 
 
 def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
   """
@@ -119,24 +125,34 @@ def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
     # Check if the time reaches midnight, change the date and current_hour
     if current_hour == 24:
       # Reformat the date 
-      date_fp = reformat_time(date_fp, year, month, day, start_hour, end_hour)
+      year_fp, date_fp = reformat_time(date_fp, year, month, day, start_hour, end_hour)
 
       # Set the current hour to zero (24-hr time restart)
       current_hour = 0
 
+    # Concatenate string to get the file path
     hour_fp = check_unit_time(current_hour) 
-    fp = source_fp + stage_fp + "." + date_fp + hour_fp + "." + type_fp
+    fp = source_fp + year_fp + "/" + stage_fp + "." + date_fp + hour_fp + "." + type_fp
 
+    # Retrieve data from file path
     grbs = pygrib.open(fp) 
     grb = grbs.message(1)
     data, lats, lons = grb.data(lat1 = 32, lat2 = 36, lon1 = -121, lon2 = -114)
-    print(data[0], lats[0], lons[0])
 
+    # Increment the hour
     current_hour += 1
     current_faux_hour += 1
 
   return data, lats, lons
 
+def open_netcdf(): # add more args later
+  # Load NEXRAD data from netcdf4 file
+  source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/Daymet/"
+  title_fp = "daymet_v4_daily_na_prcp_"
+  year_fp = "1995"
+  ncfile = source_fp + title_fp + year_fp + ".nc"
+  nexdata = Dataset(ncfile, mode = 'r')
+  print(nexdata)
 
 def main(): 
   # source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/QPE Data/2002/"
@@ -170,15 +186,21 @@ def main():
     # Get entry information
     ncfr_entry = ncfr_entries.loc[index, "Year":"End_Hour"]
     year = ncfr_entry["Year"]
+    print(index, year) # test
     month = ncfr_entry["Month"]
     day = ncfr_entry["Day"]
     start_hour = ncfr_entry["Start_Hour"]
     end_hour = ncfr_entry["End_Hour"]
   
     # Check the year; this will determine what type of file to read
-    if year < 2018:
-      continue
-    elif year >= 2018: 
+    if year < 2002:
+      # Test (only temporary) 
+      if year == 1995:
+        open_netcdf() 
+      else:
+        continue
+    elif year >= 2002:
+      print(year, month, day, start_hour, end_hour)
       # Read data from Stage IV precipitation files (GRIB) 
       data, lats, lons = get_GRIB_data(year, month, day, start_hour, end_hour)
 
