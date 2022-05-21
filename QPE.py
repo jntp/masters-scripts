@@ -1,5 +1,6 @@
 import pygrib
 import pandas as pd
+import numpy as np
 from netCDF4 import Dataset
 
 ## Auxiliary functions
@@ -92,10 +93,27 @@ def reformat_time(date_fp, year, month, day, start_hour, end_hour):
     year_fp, date_fp = create_date_fp(year, month, day)
 
     # Return modified date_fp and year (data sorted by years)
-    return year_fp, date_fp
+    return year_fp, date_fp, year, month, day
   else:
     # Return the date_fp unmodified 
-    return year_fp, date_fp 
+    return year_fp, date_fp, year, month, day
+
+def convert_date_num(month, day):
+  # Create a list representing the number of days in each month (Jan-Dec)
+  # First month is 0 because it's the beginning of the year
+  days_per_month = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30]
+  
+  # Initialize return variable, this will the time (in number of days) of the year the date falls on
+  day_num = -1 # start at -1 instead of 0 since we are dealing with arrays in Python
+
+  # Add the number of days based on the month
+  for i in range(month):
+    day_num = day_num + days_per_month[i]
+
+  # Add number of days within a month
+  day_num = day_num + day
+
+  return day_num
 
 def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
   """
@@ -125,7 +143,7 @@ def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
     # Check if the time reaches midnight, change the date and current_hour
     if current_hour == 24:
       # Reformat the date 
-      year_fp, date_fp = reformat_time(date_fp, year, month, day, start_hour, end_hour)
+      year_fp, date_fp, year, month, day = reformat_time(date_fp, year, month, day, start_hour, end_hour)
 
       # Set the current hour to zero (24-hr time restart)
       current_hour = 0
@@ -145,14 +163,53 @@ def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
 
   return data, lats, lons
 
-def open_netcdf(): # add more args later
+def get_netcdf_prcp(year, month, day, start_hour, end_hour):
   # Load NEXRAD data from netcdf4 file
   source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/Daymet/"
   title_fp = "daymet_v4_daily_na_prcp_"
-  year_fp = "1995"
+  year_fp, date_fp = create_date_fp(year, month, day)
+ 
   ncfile = source_fp + title_fp + year_fp + ".nc"
   nexdata = Dataset(ncfile, mode = 'r')
   print(nexdata)
+
+  # Get lat and lon data from netcdf file
+  lons = nexdata['lon'][:][:]
+  lats = nexdata['lat'][:][:]
+
+  # Get the shape of either lons or lats to construct new matrix
+  y, x = lons.shape
+
+  # Initialize new numpy matrices
+  prcp1 = np.zeros((y, x)) 
+  prcp2 = np.zeros((y, x))
+ 
+  # Check if the NCFR goes overnight
+  # If so, will obtain precipitation data for 2 days
+  if isOvernight(start_hour, end_hour):
+    # Find the index of the prcp array given the month and day
+    ntim1 = convert_date_num(month, day)
+
+    # Reformat the time, will be used to obtain the 2nd prcp array
+    year_fp, date_fp, year, month, day = reformat_time(date_fp, year, month, day, start_hour, end_hour)
+
+    # Find the index of the 2nd prcp array given the month and day
+    ntim2 = convert_date_num(month, day)
+
+    # Get the precipitation data
+    prcp1 = nexdata['prcp'][ntim1][:][:] 
+    prcp2 = nexdata['prcp'][ntim2][:][:]
+  else:
+    # If NCFR only spans 1 day, simply obtain precipitation for only 1 day
+    ntim1 = convert_date_num(month, day)
+
+    # Get the precipitation dadta
+    prcp1 = nexdata['prcp'][ntim1][:][:]
+
+  # Add the prcp matrices together and return the sults
+  prcp = np.add(prcp1, prcp2)
+  return prcp 
+
 
 def main(): 
   # source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/QPE Data/2002/"
@@ -186,7 +243,6 @@ def main():
     # Get entry information
     ncfr_entry = ncfr_entries.loc[index, "Year":"End_Hour"]
     year = ncfr_entry["Year"]
-    print(index, year) # test
     month = ncfr_entry["Month"]
     day = ncfr_entry["Day"]
     start_hour = ncfr_entry["Start_Hour"]
@@ -196,11 +252,10 @@ def main():
     if year < 2002:
       # Test (only temporary) 
       if year == 1995:
-        open_netcdf() 
+        prcp = get_netcdf_prcp(year, month, day, start_hour, end_hour)
       else:
         continue
     elif year >= 2002:
-      print(year, month, day, start_hour, end_hour)
       # Read data from Stage IV precipitation files (GRIB) 
       data, lats, lons = get_GRIB_data(year, month, day, start_hour, end_hour)
 
@@ -212,3 +267,4 @@ if __name__ == '__main__':
 # Percent of normal annual precipitation (total NCFR precip year/total precip year)
 # Average rainfall rates
 # Average total precipitation per NCFR event
+# Also make functions for plotting 
