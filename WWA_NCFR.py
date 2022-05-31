@@ -204,7 +204,8 @@ def main():
         ff_time_sum += ff_length 
 
   # Find the mean of the flash flood warning time lengths to get the "threshold" 
-  ff_threshold = ff_time_sum / len(ff_time_lengths)  
+  ff_threshold = ff_time_sum / len(ff_time_lengths)
+  print(ff_threshold)
 
   # Lists to obtain from the NCFR file
   ncfr_years = []

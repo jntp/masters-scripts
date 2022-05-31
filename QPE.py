@@ -210,6 +210,9 @@ def get_netcdf_prcp(year, month, day, start_hour, end_hour):
   prcp = np.add(prcp1, prcp2)
   return prcp 
 
+# def find_total_prcp(datas):
+  # Test
+
 
 def main(): 
   # source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/QPE Data/2002/"
@@ -238,7 +241,11 @@ def main():
   days = ncfr_entries.loc[:, "Day"]
   start_hours = ncfr_entries.loc[:, "Start_Hour"]
   end_hours = ncfr_entries.loc[:, "End_Hour"]
-  test = ncfr_entries.loc[0, "Year":"Day"] 
+  test = ncfr_entries.loc[0, "Year":"Day"]
+
+  # Initialize variables
+  stage4_total_prcps = np.array([])
+
   for index in indexes:
     # Get entry information
     ncfr_entry = ncfr_entries.loc[index, "Year":"End_Hour"]
@@ -258,6 +265,27 @@ def main():
     elif year >= 2002:
       # Read data from Stage IV precipitation files (GRIB) 
       data, lats, lons = get_GRIB_data(year, month, day, start_hour, end_hour)
+      data_size = len(data) 
+
+      # Find total precipitation for all NCFR events
+      # Check if total precipitation array is empty, set that equal to data (first iteration)
+      if stage4_total_prcps.size == 0:
+        stage4_total_prcps = data
+      elif data_size < len(stage4_total_prcps):
+        # Since the size of data is not always the same per iteration, check for discrepancies in size
+        # Subtract to get difference and make a new array of zeros of that size
+        new_len = len(stage4_total_prcps) - data_size
+        zero_vals = np.zeros(new_len)
+        
+        # Make a masked array out of the numpy array and append to data (also masked)
+        zero_vals_ma = np.ma.masked_array(data = zero_vals, mask = True)
+        data = np.ma.append(data, zero_vals_ma)
+
+        # Add precip values together
+        stage4_total_prcps = np.add(stage4_total_prcps, data)
+      else:
+        # Simply add precip values together if size of data matches original array
+        stage4_total_prcps = np.add(stage4_total_prcps, data)
 
 if __name__ == '__main__':
   main()
