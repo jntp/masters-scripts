@@ -61,13 +61,15 @@ def check_duplicate_events(start_dates, start_dt):
 
 
 def check_threshold(stream_datetimes, stream_Qs, start_datetime, end_datetime, discharge_threshold):
+  # Convert datetimes and streamflows to numpy array for array operations
   stream_datetimes = np.array(stream_datetimes)
   stream_Qs = np.array(stream_Qs)
 
+  # Look for indices where the time falls within the time of interest and its respective streamflow data
   time_inds = np.where((stream_datetimes >= start_datetime) & (stream_datetimes <= end_datetime))[0]
-
   time_Qs = stream_Qs[time_inds]
   
+  # Return true if streamflow exceeds threshold, otherwise return false
   if np.any(time_Qs >= discharge_threshold):
     return True
   else:
