@@ -38,13 +38,40 @@ def load_streamflow_data(file_path):
 
   return datetimes, discharges_cfs
 
+def check_duplicate_events(start_dates, start_dt):
+  # Create a bool variable to check whether the FFW is a "duplicate" (same day) event 
+  duplicates_flag = False
+
+  # Check if start_dates list is empty (if at beginning of for loop) 
+  if not start_dates:
+    # Store start datetime of FFW in start_dates list
+    # Return start_dates list and duplicates flag as it is
+    start_dates.append(start_dt)
+    return start_dates, duplicates_flag 
+  else: # For not empty lists
+    # Check if the day of the last start datetime matches the start datetime of this FFW
+    if start_dates[-1].year == start_dt.year and start_dates[-1].month == start_dt.month and start_dates[-1].day == start_dt.day:
+      # If matching, flag as duplicate event and immediately return the start_dates list and duplicates_flag variable
+      duplicates_flag = True
+      return start_dates, duplicates_flag
+    else:
+      # If not matching, leave duplicates flag unchanged and append the start datetime to end of list
+      start_dates.append(start_dt) 
+      return start_dates, duplicates_flag
+
+
 def check_threshold(stream_datetimes, stream_Qs, start_datetime, end_datetime, discharge_threshold):
   stream_datetimes = np.array(stream_datetimes)
   stream_Qs = np.array(stream_Qs)
 
   time_inds = np.where((stream_datetimes >= start_datetime) & (stream_datetimes <= end_datetime))[0]
 
-  # Finish writing this code
+  time_Qs = stream_Qs[time_inds]
+  
+  if np.any(time_Qs >= discharge_threshold):
+    return True
+  else:
+    return False
 
 
 def main():
@@ -115,20 +142,68 @@ def main():
   end_hours_ff = end_hours[right_inds]
   end_mins_ff = end_mins[right_inds]
 
-  # Create another list to store all the indices that meet both FFW criteria and streamflow threshold
-  flood_inds = []
+  # Create another list to store data that meet both FFW criteria and streamflow threshold
+  flood_inds = [] # indices
+  results = [] # bool values
+  
+  # Store starting dates of FFWs, used to prevent counting duplicating flood events
+  start_dates = []
 
-  # Loop through each FFW entry; check if the streamflow during FFW time (and up to 3 hours later)
+  # Loop through each FFW entry; check if the streamflow during FFW time exceeds threshold
   for i in right_inds:
+    # Create datetimes for the start and end FFW time
     start_dt = dt.datetime(int(beg_years_ff[i]), int(beg_months_ff[i]), int(beg_days_ff[i]), int(beg_hours_ff[i]), \
         int(beg_mins_ff[i]))
     end_dt = dt.datetime(int(end_years_ff[i]), int(end_months_ff[i]), int(end_days_ff[i]), int(end_hours_ff[i]), \
         int(end_mins_ff[i]))
 
-    check_threshold(san_diego_dts, san_diego_Qs, start_dt, end_dt, 1000)
+    # Check if FFW is a "duplicate" event (same day as the previous entry)
+    start_dates, is_duplicate = check_duplicate_events(start_dates, start_dt)
 
-# Note! There are multiple FFWs for the same times... please address this
-    
+    # Continue to next iteration if event is a duplicate
+    if is_duplicate:
+      continue
+
+    # Check which WFO issued the FFW so we know which watersheds to check
+    if wfos_ff[i] == "LOX": 
+      # Create threshold exceedance flags for each watershed within the WFO
+      is_exceedance_SP = False # Sepulveda
+      is_exceeance_WN = False # Whittier Narrows
+
+      # Check if streamflows within event exceeds threshold
+      # No data available for Sepulveda before 2002, only use Whittier Narrows event if occurs earlier
+      if start_dt.year < 2002:
+        is_exceedance_WN = check_threshold(whittier_dts, whittier_Qs, start_dt, end_dt, 7140)
+      elif start_dt.year >= 2002:
+        is_exceedance_sp = check_threshold(sepulveda_dts, sepulveda_Qs, start_dt, end_dt, 7380)
+        is_exceedance_wn = check_threshold(whittier_dts, whittier_Qs, start_dt, end_dt, 7140)
+
+      # If either watershed streamflow exceeds the threshold, append a "True" to results and their respective index
+      if is_exceedance_SP or is_exceedance_WN:
+        results.append(True)
+        flood_inds.append(i)
+      else:
+        # Only worry about results; append a "False" to the list
+        results.append(False)
+    elif wfos_ff[i] == "SGX": 
+      # Check if streamflows within event exceeds threshold
+      is_exceedance_SA = check_threshold(santa_ana_dts, santa_ana_Qs, start_dt, end_dt, 3780)
+      is_exceedance_SD = check_threshold(san_diego_dts, san_diego_Qs, start_dt, end_dt, 1460)
+
+      # If either watershed streamflow exceeds the threshold, append a "True" to results and their respective index
+      if is_exceedance_SA or is_exceedance_SD:
+        results.append(True)
+        flood_inds.append(i)
+      else:
+        # Only worry about results; append a "False" to the list
+        results.append(False)
+
+  # Get the number of SoCal flood events during the time period
+  flood_count = sum(results)
+  
+  # Print results
+  print(flood_inds)
+  print("Total Number of Flood Events (1995-2020): ", flood_count)
 
 if __name__ == '__main__':
   main()
