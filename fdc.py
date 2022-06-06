@@ -69,6 +69,10 @@ def main():
   santa_ana_median = get_median_streamflow(santa_ana_Ps_cv, santa_ana_Qs_cv)
   san_diego_median = get_median_streamflow(san_diego_Ps_cv, san_diego_Qs_cv)
 
+  # Adjust the figure size
+  plt.rcParams["figure.figsize"] = [7.00, 3.50]
+  plt.rcParams["figure.autolayout"] = True
+
   # Plot the lines (including median lines)
   plt.plot(sepulveda_Ps_cv, sepulveda_Qs_cv, label = "Sepulveda Dam", color = "blue", zorder = 2)
   plt.axhline(y = sepulveda_median, xmax = 0.5, color = "blue", linestyle = "--", zorder = 1, alpha = 0.5)
