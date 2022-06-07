@@ -210,9 +210,6 @@ def get_netcdf_prcp(year, month, day, start_hour, end_hour):
   prcp = np.add(prcp1, prcp2)
   return prcp 
 
-# def find_total_prcp(datas):
-  # Test
-
 
 def main(): 
   # source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/QPE Data/2002/"
