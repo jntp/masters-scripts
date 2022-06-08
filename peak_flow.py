@@ -130,19 +130,24 @@ def create_datetimes(year_str, month_str, day_str, start_hour_str, end_hour_str)
   start_dt = dt.datetime(year, month, day, start_hour)
 
   # Create the end datetime object for Sepulveda and Whittier Narrows Dam (plus 2 hours)
+  end_hour += 2
   end_hour_SP_WN = check_excess_time(end_hour)
-  reformat_time(start_hour, end_hour_SP_WN, year, month, day)
+  year, month, day = reformat_time(start_hour, end_hour_SP_WN, year, month, day)
+  end_dt_SP_WN = dt.datetime(year, month, day, end_hour_SP_WN)
 
   # Create the end datetime object for Santa Ana River (plus 3 hours)
-  
+  end_hour += 1
+  end_hour_SA = check_excess_time(end_hour)
+  year, month, day = reformat_time(start_hour, end_hour_SA, year, month, day)
+  end_dt_SA = dt.datetime(year, month, day, end_hour_SA)
+
   # Create the end datetime object for San Diego River (plus 6 hours)
+  end_hour += 3
+  end_hour_SD = check_excess_time(end_hour)
+  year, month, day = reformat_time(start_hour, end_hour_SD, year, month, day)
+  end_dt_SD = dt.datetime(year, month, day, end_hour_SD)
 
-  # Will for loop work better for this???
-  
-  # Create the end datetime object
-  end_dt = dt.datetime(year, month, day, end_hour)
-
-  return start_dt, end_dt 
+  return start_dt, end_dt_SP_WN, end_dt_SA, end_dt_SD
 
 def get_peak_flow(stream_datetimes, stream_Qs, start_datetime, end_datetime):
   # Convert datetimes and streamflows to numpy array for array operations
@@ -154,7 +159,10 @@ def get_peak_flow(stream_datetimes, stream_Qs, start_datetime, end_datetime):
   time_Qs = stream_Qs[time_inds]
 
   # Get and return the peak streamflow
-  peak_flow = max(time_Qs) 
+  try:
+    peak_flow = max(time_Qs) 
+  except:
+    peak_flow = 0
 
   return peak_flow 
 
@@ -188,35 +196,63 @@ def main():
   ## Format the NCFR_Stats data and check for peak streamflow 
   # Create empty lists to store datetimes, as well as peak streamflows
   start_dts = []
-  end_dts = [] 
+  end_dts_SP_WN = []
+  end_dts_SA = []
+  end_dts_SD = [] 
   peakQs = []
 
   # Iterate through every NCFR entry
   for i, year in enumerate(years):
     # Convert time parameters to datetimes and append to lists
-    start_dt, end_dt = create_datetimes(years[i], months[i], days[i], start_hours[i], end_hours[i]) 
+    start_dt, end_dt_SP_WN, end_dt_SA, end_dt_SD = create_datetimes(years[i], months[i], days[i], \
+        start_hours[i], end_hours[i])
 
     start_dts.append(start_dt)
-    end_dts.append(end_dt) 
+    end_dts_SP_WN.append(end_dt_SP_WN)
+    end_dts_SA.append(end_dt_SA)
+    end_dts_SD.append(end_dt_SD)
 
     # Check for peak streamflow for all watersheds, only if max_ref has an entry
     if not math.isnan(max_refs[i]):
+      print(years[i], months[i], days[i], start_hours[i], end_hours[i])
       # Create an empty list to store peak streamflows
       local_peakQs = []
 
-      # Get the peak streamflows for each watershed
-      sepulveda_peakQ = get_peak_flow(sepulveda_dts, sepulveda_Qs, start_dt, end_dt)
-      whittier_peakQ = get_peak_flow(whittier_dts, whittier_Qs, start_dt, end_dt)
-      santa_ana_peakQ = get_peak_flow(santa_ana_dts, santa_ana_Qs, start_dt, end_dt)
-      san_diego_peakQ = get_peak_flow(san_diego_dts, san_diego_Qs, start_dt, end_dt)
+      # Get the peak streamflows for each watershed and append streamflows to list
+      # Sepulveda streamflow data only available 2002 and later, so don't run for years before that
+      if year < 2002:
+        whittier_peakQ = get_peak_flow(whittier_dts, whittier_Qs, start_dt, end_dt_SP_WN)
+        santa_ana_peakQ = get_peak_flow(santa_ana_dts, santa_ana_Qs, start_dt, end_dt_SA)
+        san_diego_peakQ = get_peak_flow(san_diego_dts, san_diego_Qs, start_dt, end_dt_SD)
 
-      # Append streamflows to list
-      local_peakQs.append([sepulveda_peakQ, whittier_peakQ, santa_ana_peakQ, san_diego_peakQ])
+        # Append streamflows to list
+        local_peakQs.append([whittier_peakQ, santa_ana_peakQ, san_diego_peakQ])
+
+      elif year >= 2002:
+        sepulveda_peakQ = get_peak_flow(sepulveda_dts, sepulveda_Qs, start_dt, end_dt_SP_WN)
+        whittier_peakQ = get_peak_flow(whittier_dts, whittier_Qs, start_dt, end_dt_SP_WN)
+        santa_ana_peakQ = get_peak_flow(santa_ana_dts, santa_ana_Qs, start_dt, end_dt_SA)
+        san_diego_peakQ = get_peak_flow(san_diego_dts, san_diego_Qs, start_dt, end_dt_SD)
+
+        # Append streamflows to list
+        local_peakQs.append([sepulveda_peakQ, whittier_peakQ, santa_ana_peakQ, san_diego_peakQ])
 
       # Get the max streamflow for all watersheds and append to the main peakQs list
-      peakQs.append(max(local_peakQs))
+      max_local_peakQs = max(map(max, local_peakQs))
+      peakQs.append(max_local_peakQs)
+    else:
+      # Append NaN to an entry with no max_ref
+      peakQs.append(np.nan)
 
   print(peakQs) 
+
+  ## Export new data to NCFR_Stats.csv file
+  # Append peakQs column to dataframe
+  ncfr_entries['peak_streamflow'] = peakQs
+
+  # Export the updated dataframe
+  ncfr_entries.to_csv(ncfr_fp)
+
 
 if __name__ == '__main__':
   main()
