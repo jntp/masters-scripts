@@ -138,6 +138,10 @@ def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
   if isOvernight(start_hour, end_hour):
     faux_end_hour = 24 + end_hour
 
+  # Initialize variables
+  total_prcp = np.array([])
+  total_prcp_time = faux_end_hour - current_faux_hour # time length of NCFR event in hours
+
   # Retrieve data from each QPE file, so long as the file remains within the NCFR hours
   while (current_faux_hour <= faux_end_hour):
     # Check if the time reaches midnight, change the date and current_hour
@@ -157,13 +161,23 @@ def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
     grb = grbs.message(1)
     data, lats, lons = grb.data(lat1 = 32, lat2 = 36, lon1 = -121, lon2 = -114)
 
+    # Check if total_prcp is empty, set data to total_prcp
+    # Otherwise, add data to the total_prcp
+    if total_prcp.size == 0:
+      total_prcp = data
+    else:
+      total_prcp = np.add(total_prcp, data)
+
     # Increment the hour
     current_hour += 1
     current_faux_hour += 1
 
-  return data, lats, lons
+  return total_prcp, total_prcp_time, lats, lons
 
 def get_netcdf_prcp(year, month, day, start_hour, end_hour):
+  # Initial variable used to keep time length (in hours) of NCFR event, will be used to calculate rain rates
+  prcp_hours = 24 # default: 24 hours for 1 day
+
   # Load NEXRAD data from netcdf4 file
   source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/Daymet/"
   title_fp = "daymet_v4_daily_na_prcp_"
@@ -199,6 +213,9 @@ def get_netcdf_prcp(year, month, day, start_hour, end_hour):
     # Get the precipitation data
     prcp1 = nexdata['prcp'][ntim1][:][:] 
     prcp2 = nexdata['prcp'][ntim2][:][:]
+
+    # Set prcp_hours to 48 to count for 2 days
+    prcp_hours = 48
   else:
     # If NCFR only spans 1 day, simply obtain precipitation for only 1 day
     ntim1 = convert_date_num(month, day)
@@ -206,14 +223,14 @@ def get_netcdf_prcp(year, month, day, start_hour, end_hour):
     # Get the precipitation dadta
     prcp1 = nexdata['prcp'][ntim1][:][:]
 
-  # Add the prcp matrices together and return the sults
+  # Add the prcp matrices together and return the results
   prcp = np.add(prcp1, prcp2)
-  return prcp 
+  return prcp, prcp_hours
 
 
 def main(): 
   # source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/QPE Data/2002/"
-  # stage_fp = "ST4"
+  Divisor# stage_fp = "ST4"
   # date_fp = "20020101"
   # hour_fp = "00"
   # type_fp = "01h"
@@ -238,10 +255,14 @@ def main():
   days = ncfr_entries.loc[:, "Day"]
   start_hours = ncfr_entries.loc[:, "Start_Hour"]
   end_hours = ncfr_entries.loc[:, "End_Hour"]
-  test = ncfr_entries.loc[0, "Year":"Day"]
 
   # Initialize variables
+  grib_total_prcps = np.array([])
+  grib_total_hours = 0
+  grib_num_events = 0
   stage4_total_prcps = np.array([])
+  stage4_total_hours = 0
+  stage4_num_events = 0
 
   for index in indexes:
     # Get entry information
@@ -253,36 +274,67 @@ def main():
     end_hour = ncfr_entry["End_Hour"]
   
     # Check the year; this will determine what type of file to read
-    if year < 2002:
+    if year < 2002: # Use NetCDF Daymet files
       # Test (only temporary) 
       if year == 1995:
-        prcp = get_netcdf_prcp(year, month, day, start_hour, end_hour)
+        # Get precipitation and number of hours for each NCFR event 
+        prcp, event_hours = get_netcdf_prcp(year, month, day, start_hour, end_hour)
+
+        # Add event_hours to total number of hours; will be used to calculate avg rain rates
+        grib_total_hours += event_hours
+
+        # Aggregate prcp to grib_total_prcps array
+        # Check if the grib_total_prcps array is empty, set that equal to prcp (first iteration)
+        if grib_total_prcps.size == 0:
+          grib_total_prcps = prcp 
+        else:
+          # Add the precip values together
+          grib_total_prcps = np.add(grib_total_prcps, prcp)
+
+        # Increment the number of events by 1
+        grib_num_events += 1
       else:
         continue
-    elif year >= 2002:
+    elif year >= 2002: # Use Stage IV GRIB data
       # Read data from Stage IV precipitation files (GRIB) 
-      data, lats, lons = get_GRIB_data(year, month, day, start_hour, end_hour)
-      data_size = len(data) 
+      event_prcp, event_prcp_time, lats, lons = get_GRIB_data(year, month, day, start_hour, end_hour)
+      event_prcp_size = len(event_prcp)
 
-      # Find total precipitation for all NCFR events
-      # Check if total precipitation array is empty, set that equal to data (first iteration)
+      # Add hours to stage4_total_hours
+      stage4_total_hours += event_prcp_time 
+ 
+      ## Find total precipitation for all NCFR events
+      # Check if total precipitation array is empty, set that equal to event_prcp (first iteration)
       if stage4_total_prcps.size == 0:
-        stage4_total_prcps = data
-      elif data_size < len(stage4_total_prcps):
+        stage4_total_prcps = event_prcp
+      elif event_prcp_size < len(stage4_total_prcps):
         # Since the size of data is not always the same per iteration, check for discrepancies in size
         # Subtract to get difference and make a new array of zeros of that size
-        new_len = len(stage4_total_prcps) - data_size
+        new_len = len(stage4_total_prcps) - event_prcp_size
         zero_vals = np.zeros(new_len)
         
         # Make a masked array out of the numpy array and append to data (also masked)
         zero_vals_ma = np.ma.masked_array(data = zero_vals, mask = True)
-        data = np.ma.append(data, zero_vals_ma)
+        event_prcp = np.ma.append(event_prcp, zero_vals_ma)
 
         # Add precip values together
-        stage4_total_prcps = np.add(stage4_total_prcps, data)
+        stage4_total_prcps = np.add(stage4_total_prcps, event_prcp)
       else:
         # Simply add precip values together if size of data matches original array
-        stage4_total_prcps = np.add(stage4_total_prcps, data)
+        stage4_total_prcps = np.add(stage4_total_prcps, event_prcp)
+
+      # Increment the number of events by 1
+      stage4_num_events += 1
+
+  ## Find the average rainfall rate for each NCFR event
+  grib_rain_rate = grib_total_prcps / grib_total_hours
+  stage4_rain_rate = stage4_total_prcps / stage4_total_hours
+  
+  ## Find the average total precipitation per NCFR event
+  grib_avg_prcp = grib_total_prcps / grib_num_events 
+  stage4_avg_prcp = stage4_total_prcps / stage4_num_events
+  print(stage4_avg_prcp)
+  
 
 if __name__ == '__main__':
   main()
@@ -292,4 +344,7 @@ if __name__ == '__main__':
 # Percent of normal annual precipitation (total NCFR precip year/total precip year)
 # Average rainfall rates
 # Average total precipitation per NCFR event
-# Also make functions for plotting 
+# Also make functions for plotting
+
+# Left off at saving this to csv file???
+# Also percent of normal annual precip (open up sdat file or whatever)
