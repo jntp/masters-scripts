@@ -59,6 +59,14 @@ def isMonthEnd(year, month, day):
     # print(right_day, right_month) 
     return False
 
+def get_spatial_bounds(y, x, y_upper = -587432, y_lower = -920432, x_upper = -1378560, x_lower = -1841560):
+  # Get the x and y spatial extent (should encompass SoCal only)
+  y_bounds = np.where((y > y_lower) & (y < y_upper))[0]
+  x_bounds = np.where((x > x_lower) & (x < x_upper))[0]
+
+  return y_bounds, x_bounds
+
+
 ## Main Functions
 
 def create_date_fp(year, month, day):
@@ -187,9 +195,14 @@ def get_netcdf_prcp(year, month, day, start_hour, end_hour):
   nexdata = Dataset(ncfile, mode = 'r')
   print(nexdata)
 
+  # Get y and x data from netcdf files and specify SoCal spatial bounds
+  ys = nexdata['y'][:]
+  xs = nexdata['x'][:]
+  y_bounds, x_bounds = get_spatial_bounds(ys, xs) 
+
   # Get lat and lon data from netcdf file
-  lons = nexdata['lon'][:][:]
-  lats = nexdata['lat'][:][:]
+  lons = nexdata['lon'][y_bounds, x_bounds]
+  lats = nexdata['lat'][y_bounds, x_bounds]
 
   # Get the shape of either lons or lats to construct new matrix
   y, x = lons.shape
@@ -211,8 +224,8 @@ def get_netcdf_prcp(year, month, day, start_hour, end_hour):
     ntim2 = convert_date_num(month, day)
 
     # Get the precipitation data
-    prcp1 = nexdata['prcp'][ntim1][:][:] 
-    prcp2 = nexdata['prcp'][ntim2][:][:]
+    prcp1 = nexdata['prcp'][ntim1, y_bounds, x_bounds]
+    prcp2 = nexdata['prcp'][ntim2, y_bounds, x_bounds]
 
     # Set prcp_hours to 48 to count for 2 days
     prcp_hours = 48
@@ -221,30 +234,28 @@ def get_netcdf_prcp(year, month, day, start_hour, end_hour):
     ntim1 = convert_date_num(month, day)
 
     # Get the precipitation dadta
-    prcp1 = nexdata['prcp'][ntim1][:][:]
+    prcp1 = nexdata['prcp'][ntim1, y_bounds, x_bounds]
 
   # Add the prcp matrices together and return the results
   prcp = np.add(prcp1, prcp2)
   return prcp, prcp_hours
 
 
-def main(): 
-  # source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/QPE Data/2002/"
-  Divisor# stage_fp = "ST4"
-  # date_fp = "20020101"
-  # hour_fp = "00"
-  # type_fp = "01h"
-  # fp = source_fp + stage_fp + "." + date_fp + hour_fp + "." + type_fp
+def main():  
+  ## Get precipitation climatology; will be used to calculate percent of normal precipitation
+  # Load NEXRAD data from netcdf4 file
+  climo_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/Daymet/sdat_climatology.nc"
+  climo_data = Dataset(climo_fp, mode = 'r')
+  print(climo_data)
 
-  # grbs = pygrib.open(fp)
-  # grb = grbs.message(1) 
-  # grb = grbs.select(name = "Total Precipitation")[0]
-  # precip = grb.values
-  # print(precip.shape, precip.min(), precip.max())
-  # data, lats, lons = grb.data(lat1 = 32, lat2 = 36, lon1 = -121, lon2 = -114)
-  # print(data.shape, data.max(), data.min(), lats.shape, lons.shape)
-  # print(data[50], lats[50], lons[50])
+  # Specify SoCal spatial bounds in climatology file
+  y_climo = climo_data['y'][:]
+  x_climo = climo_data['x'][:] 
+  y_bounds, x_bounds = get_spatial_bounds(y_climo, x_climo)
 
+  # Get the prcp data from climo_data netcdf file
+  climo_prcp = climo_data['Band1'][y_bounds, x_bounds]
+ 
   ## Total Precipitation for all NCFR events
   # Load times from csv file
   ncfr_fp = "./data/NCFR_Catalog.csv" 
