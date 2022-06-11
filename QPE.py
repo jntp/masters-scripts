@@ -2,6 +2,10 @@ import pygrib
 import pandas as pd
 import numpy as np
 from netCDF4 import Dataset
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import metpy.plots as mpplots # temp
 
 ## Auxiliary functions
 def check_unit_time(unit_time):
@@ -238,7 +242,23 @@ def get_netcdf_prcp(year, month, day, start_hour, end_hour):
 
   # Add the prcp matrices together and return the results
   prcp = np.add(prcp1, prcp2)
-  return prcp, prcp_hours
+  return prcp, prcp_hours, lats, lons
+
+## Plotting Functions
+
+# Create a base map to diplay QPE data
+def new_map(fig, lon, lat):
+  # Create projection centered on the radar. Allows us to use x and y relative to the radar
+  proj = ccrs.LambertConformal(central_longitude = lon, central_latitude = lat)
+
+  # New axes with the specified projection
+  ax = fig.add_axes([0.02, 0.02, 0.96, 0.96], projection = proj)
+
+  # Add coastlines and states
+  ax.add_feature(cfeature.COASTLINE.with_scale('50m'), linewidth = 2)
+  ax.add_feature(cfeature.STATES.with_scale('50m'))
+
+  return ax
 
 
 def main():  
@@ -269,9 +289,14 @@ def main():
 
   # Initialize variables
   grib_total_prcps = np.array([])
+  grib_lons = np.array([])
+  grib_lats = np.array([])
   grib_total_hours = 0
   grib_num_events = 0
+  grib_num_years = 1 # change this later (when running entire code)
   stage4_total_prcps = np.array([])
+  stage4_lons = np.array([])
+  stage4_lats = np.array([]) 
   stage4_total_hours = 0
   stage4_num_events = 0
 
@@ -284,12 +309,13 @@ def main():
     start_hour = ncfr_entry["Start_Hour"]
     end_hour = ncfr_entry["End_Hour"]
   
+    # TEMPORARY - PLEASE CHANGE THE YEARS IN IF STATEMENT WHEN DONE!!!
     # Check the year; this will determine what type of file to read
-    if year < 2002: # Use NetCDF Daymet files
+    if year != 2002: # Use NetCDF Daymet files
       # Test (only temporary) 
       if year == 1995:
         # Get precipitation and number of hours for each NCFR event 
-        prcp, event_hours = get_netcdf_prcp(year, month, day, start_hour, end_hour)
+        prcp, event_hours, lats, lons = get_netcdf_prcp(year, month, day, start_hour, end_hour)
 
         # Add event_hours to total number of hours; will be used to calculate avg rain rates
         grib_total_hours += event_hours
@@ -302,11 +328,16 @@ def main():
           # Add the precip values together
           grib_total_prcps = np.add(grib_total_prcps, prcp)
 
+        # Set lons and lats to grib_lons and grib_lats; will be used for plotting
+        if grib_lons.size == 0 and grib_lats.size == 0:
+          grib_lons = lons
+          grib_lats = lats
+
         # Increment the number of events by 1
         grib_num_events += 1
       else:
         continue
-    elif year >= 2002: # Use Stage IV GRIB data
+    elif year == 2002: # Use Stage IV GRIB data
       # Read data from Stage IV precipitation files (GRIB) 
       event_prcp, event_prcp_time, lats, lons = get_GRIB_data(year, month, day, start_hour, end_hour)
       event_prcp_size = len(event_prcp)
@@ -334,8 +365,16 @@ def main():
         # Simply add precip values together if size of data matches original array
         stage4_total_prcps = np.add(stage4_total_prcps, event_prcp)
 
+      # Set lons and lats to grib_lons and grib_lats; will be used for plotting
+      if stage4_lons.size == 0 and stage4_lats.size == 0:
+        stage4_lons = lons
+        stage4_lats = lats
+
       # Increment the number of events by 1
       stage4_num_events += 1
+
+  ## Find the percent of normal annual precipitation (total NCFR precip year/total precip year)
+  prop_normal_prcp = grib_total_prcps / (climo_prcp * grib_num_years)
 
   ## Find the average rainfall rate for each NCFR event
   grib_rain_rate = grib_total_prcps / grib_total_hours
@@ -344,18 +383,43 @@ def main():
   ## Find the average total precipitation per NCFR event
   grib_avg_prcp = grib_total_prcps / grib_num_events 
   stage4_avg_prcp = stage4_total_prcps / stage4_num_events
-  print(stage4_avg_prcp)
+  
+  ## Plot the data
+  # Specify a central longitude and latitude (i.e. reference point)
+  central_lon = -117.636 
+  central_lat = 33.818
+
+  # Create a new figure and map 
+  fig = plt.figure(figsize = (10, 10))
+  ax = new_map(fig, central_lon, central_lat) # -117.636, 33.818 
+
+  # Set limits in lat/lon 
+  ax.set_extent([-121, -114, 32, 36]) # SoCal
+
+  # Get color table and value mapping info for the NWS Reflectivity data (test and temporary)
+  ref_norm, ref_cmap = mpplots.ctables.registry.get_with_steps('NWSReflectivity', 5, 5)
+
+  # Transform to this projection
+  use_proj = ccrs.LambertConformal(central_longitude = central_lon, central_latitude = central_lat)
+
+  # Transfer lats, lons matrices from geodetic lat/lon to LambertConformal
+  out_xyz = use_proj.transform_points(ccrs.Geodetic(), grib_lons, grib_lats) 
+  
+  # Separate x, y from out_xyz
+  grib_x = out_xyz[:, :, 0] 
+  grib_y = out_xyz[:, :, 1]
+
+  # More Test
+  # print(stage4_lats[0:15])
+  # Use np.reshape to convert to 2d array (also check documentation)
+
+  # Test 
+  test_contour = ax.contourf(stage4_lons, stage4_lats, stage4_total_prcps)
+
+  plt.show()
   
 
 if __name__ == '__main__':
   main()
 
-# Find:
-# Total precipitation for all NCFR events
-# Percent of normal annual precipitation (total NCFR precip year/total precip year)
-# Average rainfall rates
-# Average total precipitation per NCFR event
 # Also make functions for plotting
-
-# Left off at saving this to csv file???
-# Also percent of normal annual precip (open up sdat file or whatever)
