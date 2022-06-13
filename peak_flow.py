@@ -57,7 +57,13 @@ def check_excess_time(hour):
   if hour >= 24:
     hour -= 24
   
-  return hour 
+  return hour
+
+def append_streamflows(local_peakQs, streamflow_list):
+  for streamflow in streamflow_list:
+    local_peakQs.append(streamflow)
+
+  return local_peakQs
 
 ## Main Functions
 
@@ -164,7 +170,37 @@ def get_peak_flow(stream_datetimes, stream_Qs, start_datetime, end_datetime):
   except:
     peak_flow = 0
 
-  return peak_flow 
+  return peak_flow
+
+def get_peak_watershed(local_peakQs):
+  # Initialize variable that will return which watershed reported peak flow 
+  peak_watershed = "" 
+
+  # Find the maximum streamflow for all watersheds 
+  max_local_peakQs = max(local_peakQs)
+  
+  # Get the index of max local streamflow
+  max_ind = np.where(local_peakQs == max_local_peakQs)[0]
+  
+  # Get the watershed that has the peak streamflow
+  if len(local_peakQs) == 4: # test for all 4 watersheds
+    if max_ind == 0:
+      peak_watershed = 'SP' # Sepulveda Dam
+    elif max_ind == 1:
+      peak_watershed = 'WN' # Whittier Narrows Dam
+    elif max_ind == 2:
+      peak_watershed = 'SA' # Santa Ana River
+    elif max_ind == 3:
+      peak_watershed = 'SD' # San Diego River
+  elif len(local_peakQs) == 3: # test for all but Sepulveda Dam
+    if max_ind == 0:
+      peak_watershed = 'WN' # Whittier Narrows Dam
+    elif max_ind == 1:
+      peak_watershed = 'SA' # Santa Ana River
+    elif max_ind == 2:
+      peak_watershed = 'SD' # San Diego River
+
+  return max_local_peakQs, peak_watershed
 
 
 def main():
@@ -200,6 +236,7 @@ def main():
   end_dts_SA = []
   end_dts_SD = [] 
   peakQs = []
+  peak_watersheds = [] 
 
   # Iterate through every NCFR entry
   for i, year in enumerate(years):
@@ -220,14 +257,13 @@ def main():
 
       # Get the peak streamflows for each watershed and append streamflows to list
       # Sepulveda streamflow data only available 2002 and later, so don't run for years before that
-      if year < 2002:
+      if year == 1998:
         whittier_peakQ = get_peak_flow(whittier_dts, whittier_Qs, start_dt, end_dt_SP_WN)
         santa_ana_peakQ = get_peak_flow(santa_ana_dts, santa_ana_Qs, start_dt, end_dt_SA)
         san_diego_peakQ = get_peak_flow(san_diego_dts, san_diego_Qs, start_dt, end_dt_SD)
 
         # Append streamflows to list
-        local_peakQs.append([whittier_peakQ, santa_ana_peakQ, san_diego_peakQ])
-
+        local_peakQs = append_streamflows(local_peakQs, [whittier_peakQ, santa_ana_peakQ, san_diego_peakQ])
       elif year >= 2002:
         sepulveda_peakQ = get_peak_flow(sepulveda_dts, sepulveda_Qs, start_dt, end_dt_SP_WN)
         whittier_peakQ = get_peak_flow(whittier_dts, whittier_Qs, start_dt, end_dt_SP_WN)
@@ -235,24 +271,30 @@ def main():
         san_diego_peakQ = get_peak_flow(san_diego_dts, san_diego_Qs, start_dt, end_dt_SD)
 
         # Append streamflows to list
-        local_peakQs.append([sepulveda_peakQ, whittier_peakQ, santa_ana_peakQ, san_diego_peakQ])
+        local_peakQs = append_streamflows(local_peakQs, [sepulveda_peakQ, whittier_peakQ, santa_ana_peakQ, \
+            san_diego_peakQ]) 
 
       # Get the max streamflow for all watersheds and append to the main peakQs list
-      max_local_peakQs = max(map(max, local_peakQs))
-      peakQs.append(max_local_peakQs)
+      if year == 1998: # Test and temp! Remove the if statement later
+        max_local_peakQs, peak_watershed = get_peak_watershed(local_peakQs) 
+        peakQs.append(max_local_peakQs)
+        peak_watersheds.append(peak_watershed)
     else:
       # Append NaN to an entry with no max_ref
       peakQs.append(np.nan)
 
-  print(peakQs) 
+  print(peakQs)
+  print(peak_watersheds)
 
   ## Export new data to NCFR_Stats.csv file
   # Append peakQs column to dataframe
-  ncfr_entries['peak_streamflow'] = peakQs
+  # ncfr_entries['peak_streamflow'] = peakQs
 
   # Export the updated dataframe
-  ncfr_entries.to_csv(ncfr_fp)
+  # ncfr_entries.to_csv(ncfr_fp)
 
 
 if __name__ == '__main__':
   main()
+
+# Fix code and run for all NCFR events
