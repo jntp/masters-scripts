@@ -204,8 +204,6 @@ def get_peak_watershed(local_peakQs):
 
 
 def main():
-  # Load data and look at streamflows for ze timeframe (and perhaps a few hrs more?)
-  # Might want to verify how many hours... perhaps longer for SD and SA????
   ## Load streamflow data
   # Get the file paths
   sepulveda_fp = "./data/sepulveda_15min_discharge_2002_2020.csv"
@@ -257,7 +255,7 @@ def main():
 
       # Get the peak streamflows for each watershed and append streamflows to list
       # Sepulveda streamflow data only available 2002 and later, so don't run for years before that
-      if year == 1998:
+      if year < 2002:
         whittier_peakQ = get_peak_flow(whittier_dts, whittier_Qs, start_dt, end_dt_SP_WN)
         santa_ana_peakQ = get_peak_flow(santa_ana_dts, santa_ana_Qs, start_dt, end_dt_SA)
         san_diego_peakQ = get_peak_flow(san_diego_dts, san_diego_Qs, start_dt, end_dt_SD)
@@ -275,26 +273,25 @@ def main():
             san_diego_peakQ]) 
 
       # Get the max streamflow for all watersheds and append to the main peakQs list
-      if year == 1998: # Test and temp! Remove the if statement later
-        max_local_peakQs, peak_watershed = get_peak_watershed(local_peakQs) 
-        peakQs.append(max_local_peakQs)
-        peak_watersheds.append(peak_watershed)
+      max_local_peakQs, peak_watershed = get_peak_watershed(local_peakQs) 
+      peakQs.append(max_local_peakQs)
+      peak_watersheds.append(peak_watershed)
     else:
-      # Append NaN to an entry with no max_ref
+      # Append NaN and "" to an entry with no max_ref
       peakQs.append(np.nan)
+      peak_watersheds.append("")
 
   print(peakQs)
   print(peak_watersheds)
 
   ## Export new data to NCFR_Stats.csv file
   # Append peakQs column to dataframe
-  # ncfr_entries['peak_streamflow'] = peakQs
+  ncfr_entries['peak_streamflow'] = peakQs
+  ncfr_entries['peak_watershed'] = peak_watersheds
 
   # Export the updated dataframe
-  # ncfr_entries.to_csv(ncfr_fp)
+  ncfr_entries.to_csv(ncfr_fp)
 
 
 if __name__ == '__main__':
   main()
-
-# Fix code and run for all NCFR events
