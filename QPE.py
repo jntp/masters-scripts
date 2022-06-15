@@ -70,7 +70,6 @@ def get_spatial_bounds(y, x, y_upper = -587432, y_lower = -920432, x_upper = -13
 
   return y_bounds, x_bounds
 
-
 ## Main Functions
 
 def create_date_fp(year, month, day):
@@ -126,80 +125,6 @@ def convert_date_num(month, day):
   day_num = day_num + day
 
   return day_num
-
-def get_GRIB_data(year, month, day, start_hour, end_hour, type_fp = "01h"):
-  """
-  Parameters:
-    year - int
-    month - int
-    day - int 
-    start_hour - int
-    end_hour - int
-    type_fp - string (default: hourly) 
-  """
-  source_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/QPE Data/"
-  stage_fp = "ST4"
-  year_fp, date_fp = create_date_fp(year, month, day)
-
-  # Set variables that will be used to iterate through the QPE files
-  current_hour = start_hour
-  current_faux_hour = start_hour
-  faux_end_hour = end_hour # will be used to determine when the while loop below will stop
-
-  # Add hours to 24 if the NCFR ends overnight
-  if isOvernight(start_hour, end_hour):
-    faux_end_hour = 24 + end_hour
-
-  # Initialize variables
-  total_prcp = np.array([])
-  total_prcp2 = np.array([]) # test
-  total_prcp_time = faux_end_hour - current_faux_hour # time length of NCFR event in hours
-
-  # Retrieve data from each QPE file, so long as the file remains within the NCFR hours
-  while (current_faux_hour <= faux_end_hour):
-    # Check if the time reaches midnight, change the date and current_hour
-    if current_hour == 24:
-      # Reformat the date 
-      year_fp, date_fp, year, month, day = reformat_time(date_fp, year, month, day, start_hour, end_hour)
-
-      # Set the current hour to zero (24-hr time restart)
-      current_hour = 0
-
-    # Concatenate string to get the file path
-    hour_fp = check_unit_time(current_hour) 
-    fp = source_fp + year_fp + "/" + stage_fp + "." + date_fp + hour_fp + "." + type_fp
-
-    # Retrieve data from file path
-    grbs = pygrib.open(fp) 
-    grb = grbs.message(1)
-    data, lats, lons = grb.data(lat1 = 32, lat2 = 36, lon1 = -121, lon2 = -114)
-
-    data_test = grbs[1].values
-    lats_test, lons_test = grbs[1].latlons()
-    # lats_scan = lats_test[:, 0]
-    # lons_scan = lons_test[0, :]
-    # lats_ind = np.where((lats_scan >= 32) & (lats_scan <= 36))[0]
-    # lons_i, lons_j = np.where((lons_test >= -121) & (lons_test <= -114))
-    # print(test_new)
-    # print(lons_test[lons_i, lons_j])
-    # 275:392, 0:146, switch around
-    test_test = data_test[0:146, 275:392]
-    # print(data_test.shape))
-
-    # Check if total_prcp is empty, set data to total_prcp
-    # Otherwise, add data to the total_prcp
-    if total_prcp.size == 0:
-      total_prcp = data
-      total_prcp2 = test_test
-    else:
-      total_prcp = np.add(total_prcp, data)
-      total_prcp2 = np.add(total_prcp2, test_test)
-
-    # Increment the hour
-    current_hour += 1
-    current_faux_hour += 1
-
-  return total_prcp, total_prcp_time, lats, lons
 
 def get_netcdf_prcp(year, month, day, start_hour, end_hour):
   # Initial variable used to keep time length (in hours) of NCFR event, will be used to calculate rain rates
@@ -309,11 +234,6 @@ def main():
   grib_total_hours = 0
   grib_num_events = 0
   grib_num_years = 1 # change this later (when running entire code)
-  stage4_total_prcps = np.array([])
-  stage4_lons = np.array([])
-  stage4_lats = np.array([]) 
-  stage4_total_hours = 0
-  stage4_num_events = 0
 
   for index in indexes:
     # Get entry information
@@ -324,80 +244,40 @@ def main():
     start_hour = ncfr_entry["Start_Hour"]
     end_hour = ncfr_entry["End_Hour"]
   
-    # TEMPORARY - PLEASE CHANGE THE YEARS IN IF STATEMENT WHEN DONE!!!
-    # Check the year; this will determine what type of file to read
-    if year != 2003: # Use NetCDF Daymet files
-      # Test (only temporary) 
-      if year == 1995:
-        # Get precipitation and number of hours for each NCFR event 
-        prcp, event_hours, lats, lons = get_netcdf_prcp(year, month, day, start_hour, end_hour)
+    # Test (only temporary) 
+    if year == 1995:
+      # Get precipitation and number of hours for each NCFR event 
+      prcp, event_hours, lats, lons = get_netcdf_prcp(year, month, day, start_hour, end_hour)
 
-        # Add event_hours to total number of hours; will be used to calculate avg rain rates
-        grib_total_hours += event_hours
+      # Add event_hours to total number of hours; will be used to calculate avg rain rates
+      grib_total_hours += event_hours
 
-        # Aggregate prcp to grib_total_prcps array
-        # Check if the grib_total_prcps array is empty, set that equal to prcp (first iteration)
-        if grib_total_prcps.size == 0:
-          grib_total_prcps = prcp 
-        else:
-          # Add the precip values together
-          grib_total_prcps = np.add(grib_total_prcps, prcp)
-
-        # Set lons and lats to grib_lons and grib_lats; will be used for plotting
-        if grib_lons.size == 0 and grib_lats.size == 0:
-          grib_lons = lons
-          grib_lats = lats
-
-        # Increment the number of events by 1
-        grib_num_events += 1
+      # Aggregate prcp to grib_total_prcps array
+      # Check if the grib_total_prcps array is empty, set that equal to prcp (first iteration)
+      if grib_total_prcps.size == 0:
+        grib_total_prcps = prcp 
       else:
-        continue
-    elif year == 2003: # Use Stage IV GRIB data
-      # Read data from Stage IV precipitation files (GRIB) 
-      event_prcp, event_prcp_time, lats, lons = get_GRIB_data(year, month, day, start_hour, end_hour)
-      event_prcp_size = len(event_prcp)
-
-      # Add hours to stage4_total_hours
-      stage4_total_hours += event_prcp_time 
- 
-      ## Find total precipitation for all NCFR events
-      # Check if total precipitation array is empty, set that equal to event_prcp (first iteration)
-      if stage4_total_prcps.size == 0:
-        stage4_total_prcps = event_prcp
-      elif event_prcp_size < len(stage4_total_prcps):
-        # Since the size of data is not always the same per iteration, check for discrepancies in size
-        # Subtract to get difference and make a new array of zeros of that size
-        new_len = len(stage4_total_prcps) - event_prcp_size
-        zero_vals = np.zeros(new_len)
-        
-        # Make a masked array out of the numpy array and append to data (also masked)
-        zero_vals_ma = np.ma.masked_array(data = zero_vals, mask = True)
-        event_prcp = np.ma.append(event_prcp, zero_vals_ma)
-
-        # Add precip values together
-        stage4_total_prcps = np.add(stage4_total_prcps, event_prcp)
-      else:
-        # Simply add precip values together if size of data matches original array
-        stage4_total_prcps = np.add(stage4_total_prcps, event_prcp)
+        # Add the precip values together
+        grib_total_prcps = np.add(grib_total_prcps, prcp)
 
       # Set lons and lats to grib_lons and grib_lats; will be used for plotting
-      if stage4_lons.size == 0 and stage4_lats.size == 0:
-        stage4_lons = lons
-        stage4_lats = lats
+      if grib_lons.size == 0 and grib_lats.size == 0:
+        grib_lons = lons
+        grib_lats = lats
 
       # Increment the number of events by 1
-      stage4_num_events += 1
-
+      grib_num_events += 1
+    else:
+      continue
+    
   ## Find the percent of normal annual precipitation (total NCFR precip year/total precip year)
   prop_normal_prcp = grib_total_prcps / (climo_prcp * grib_num_years)
 
   ## Find the average rainfall rate for each NCFR event
   grib_rain_rate = grib_total_prcps / grib_total_hours
-  stage4_rain_rate = stage4_total_prcps / stage4_total_hours
   
   ## Find the average total precipitation per NCFR event
-  grib_avg_prcp = grib_total_prcps / grib_num_events 
-  stage4_avg_prcp = stage4_total_prcps / stage4_num_events
+  grib_avg_prcp = grib_total_prcps / grib_num_events
   
   ## Plot the data
   # Specify a central longitude and latitude (i.e. reference point)
@@ -423,41 +303,23 @@ def main():
   # Separate x, y from out_xyz
   grib_x = out_xyz[:, :, 0] 
   grib_y = out_xyz[:, :, 1]
+ 
+  # Create the contour plot
+  grib_contour = ax.contourf(grib_x, grib_y, grib_total_prcps)
 
-  # More Test
-  # print(stage4_lats[0:15])
-  # Use np.reshape to convert to 2d array (also check documentation)
-  
-  # Shave off stage4 variables, will be make an easier to convert to a 2D array
-  st4_lats = stage4_lats[0:18120]
-  st4_lons = stage4_lons[0:18120]
-  st4_total_prcps = stage4_total_prcps[0:18120]
-  st4_lats = np.reshape(st4_lats, (120, 151)) 
-  st4_lons = np.reshape(st4_lons, (120, 151))
-  st4_total_prcps = np.reshape(st4_total_prcps, (120, 151))
-  st4_avg_prcp = st4_total_prcps / stage4_num_events
-  
-  # Meshgrid test
-  # mesh_lons, mesh_lats = np.meshgrid(st4_lons, st4_lats)
-  # test_ind = np.where(st4_lons == -119.15070329)
-  # print(st4_lats)
-  # print(st4_lons)
+  # Set title and labels for x and y axis
+  ax.set_title("QPE - Total Precipitation (1995)") 
 
-  # Reshape to a 2D array
-  # Transfer lats, lons matrices from geodetic lat/lon to LambertConformal
-  # out_xyz2 = use_proj.transform_points(ccrs.Geodetic(), st4_lons, st4_lats) 
+  # Add color bar
+  cbar = fig.colorbar(grib_contour)
+  cbar.ax.set_ylabel("Precipitation (mm)")
 
-  # Separate x, y from out_xyz
-  # st4_x = out_xyz2[:, :, 0] 
-  # st4_y = out_xyz2[:, :, 1]
-
-  # Test 
-  # test_contour = ax.contourf(st4_x, st4_y, st4_avg_prcp)
-
-  # plt.show()
+  plt.show()
   
 
 if __name__ == '__main__':
   main()
 
-# Also make functions for plotting
+# Consider changing the color scheme and also fix the size? (looks out of proportion)
+# Figure out to make multiple plots at once
+# Save the files (test before running all files)
