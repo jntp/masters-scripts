@@ -202,6 +202,13 @@ def get_peak_watershed(local_peakQs):
 
   return max_local_peakQs, peak_watershed
 
+def append_regional_streamflows(list1, list2, list3, list4, Q1, Q2, Q3, Q4):
+  list1.append(Q1)
+  list2.append(Q2)
+  list3.append(Q3)
+  list4.append(Q4)
+
+  return list1, list2, list3, list4
 
 def main():
   ## Load streamflow data
@@ -233,7 +240,10 @@ def main():
   end_dts_SP_WN = []
   end_dts_SA = []
   end_dts_SD = [] 
-  peakQs = []
+  peakQs_SP = []
+  peakQs_WN = []
+  peakQs_SA = []
+  peakQs_SD = []
   peak_watersheds = [] 
 
   # Iterate through every NCFR entry
@@ -262,6 +272,10 @@ def main():
 
         # Append streamflows to list
         local_peakQs = append_streamflows(local_peakQs, [whittier_peakQ, santa_ana_peakQ, san_diego_peakQ])
+
+        # Append streamflows to site-specific lists
+        peakQs_SP, peakQs_WN, peakQs_SA, peakQs_SD = append_regional_streamflows(peakQs_SP, peakQs_WN, \
+            peakQs_SA, peakQs_SD, np.nan, whittier_peakQ, santa_ana_peakQ, san_diego_peakQ)
       elif year >= 2002:
         sepulveda_peakQ = get_peak_flow(sepulveda_dts, sepulveda_Qs, start_dt, end_dt_SP_WN)
         whittier_peakQ = get_peak_flow(whittier_dts, whittier_Qs, start_dt, end_dt_SP_WN)
@@ -272,21 +286,31 @@ def main():
         local_peakQs = append_streamflows(local_peakQs, [sepulveda_peakQ, whittier_peakQ, santa_ana_peakQ, \
             san_diego_peakQ]) 
 
+        # Append streamflows to site-specific lists
+        peakQs_SP, peakQs_WN, peakQs_SA, peakQs_SD = append_regional_streamflows(peakQs_SP, peakQs_WN, \
+            peakQs_SA, peakQs_SD, sepulveda_peakQ, whittier_peakQ, santa_ana_peakQ, san_diego_peakQ)
+
       # Get the max streamflow for all watersheds and append to the main peakQs list
       max_local_peakQs, peak_watershed = get_peak_watershed(local_peakQs) 
-      peakQs.append(max_local_peakQs)
       peak_watersheds.append(peak_watershed)
     else:
       # Append NaN and "" to an entry with no max_ref
-      peakQs.append(np.nan)
+      peakQs_SP, peakQs_WN, peakQs_SA, peakQs_SD = append_regional_streamflows(peakQs_SP, peakQs_WN, \
+          peakQs_SA, peakQs_SD, np.nan, np.nan, np.nan, np.nan)
+
       peak_watersheds.append("")
 
-  print(peakQs)
-  print(peak_watersheds)
+  print(peakQs_SP)
+  print(peakQs_WN)
+  print(peakQs_SA)
+  print(peakQs_SD)
 
   ## Export new data to NCFR_Stats.csv file
   # Append peakQs column to dataframe
-  ncfr_entries['peak_streamflow'] = peakQs
+  ncfr_entries['peak_Q_SP'] = peakQs_SP
+  ncfr_entries['peak_Q_WN'] = peakQs_WN
+  ncfr_entries['peak_Q_SA'] = peakQs_SA
+  ncfr_entries['peak_Q_SD'] = peakQs_SD
   ncfr_entries['peak_watershed'] = peak_watersheds
 
   # Export the updated dataframe

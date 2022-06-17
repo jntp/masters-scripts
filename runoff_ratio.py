@@ -104,6 +104,23 @@ def get_runoff_ratio(discharge, precip_mm, drainage_area, period = 86400):
 
   return runoff, runoff_ratio
 
+def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, drainage_area):
+  # Get mean_discharge, mean_precip, runoff, and runoff_ratio for stream and gauge
+  try:
+    mean_discharge = get_mean_data(stream_dts, stream_Qs, ncfr_dt, ncfr_dt2)
+    mean_precip = get_mean_data(gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2)
+    runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_area) 
+  except:
+    mean_discharge = np.nan
+    mean_precip = np.nan
+    runoff = np.nan
+    runoff_ratio = np.nan
+
+  # Check if the runoff_ratio equals infinity; set to NaN
+  if runoff_ratio == float('inf'):
+    runoff_ratio = np.nan
+
+  return mean_discharge, mean_precip, runoff, runoff_ratio
 
 def main():
   ## Load mean discharge and daily precipitation data
@@ -147,20 +164,27 @@ def main():
   drainage_areas = [455060911, 327892495, 6363859786, 1116284876]
 
   # Create empty lists to store new data to be saved in dataframe
-  mean_discharges = []
-  mean_precips = []
-  runoffs = []
-  runoff_ratios = []
+  mean_Qs_SP = []
+  mean_Qs_WN = []
+  mean_Qs_SA = []
+  mean_Qs_SD = []
+  mean_prcps_SP = []
+  mean_prcps_WN = []
+  mean_prcps_SA = []
+  mean_prcps_SD = []
+  runoffs_SP = []
+  runoffs_WN = []
+  runoffs_SA = []
+  runoffs_SD = []
+  run_ratios_SP = []
+  run_ratios_WN = []
+  run_ratios_SA = []
+  run_ratios_SD = []
 
   # Iterate through every NCFR entry
   for i, year in enumerate(years):
     # Check for mean discharge and daily precip, only if max_refs has an entry
     if not math.isnan(max_refs[i]):
-      # Check year/month/day of ncfr entry, check if it goes overnight
-      # Create datetime of NCFR entry (plus 1 more day if it goes overnight)
-      # Retrieve mean discharge that matches NCFR entry
-      # Retrieve daily precip that matches NCFR entry
-
       # Create two NCFR datetime objects of the same day initially
       ncfr_dt = dt.datetime(int(years[i]), int(months[i]), int(days[i]))
       ncfr_dt2 = dt.datetime(int(years[i]), int(months[i]), int(days[i]))
@@ -171,76 +195,73 @@ def main():
 
       # Retrieve the mean discharge and daily precipitation from the watershed that recorded peak streamflow
       # Calculate runoff ratio immediately after retrieving mean discharge and daily precipitation
-      mean_discharge = 0 # default
-      mean_precip = 0 # default
-      runoff = 0 # default
-      runoff_ratio = 0 # default
-
       # Use try/except blocks to incorporate "Plan B" if "Plan A" does not have measurements
-      if peak_watersheds[i] == "SP":
-        try:
-          mean_discharge = get_mean_data(sepulveda_dts, sepulveda_Qs, ncfr_dt, ncfr_dt2)
-          mean_precip = get_mean_data(cheeseboro_SP_dts, cheeseboro_SP_prcp, ncfr_dt, ncfr_dt2)
-          runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_areas[0]) 
-        except:
-          mean_discharge = get_mean_data(whittier_dts, whittier_Qs, ncfr_dt, ncfr_dt2)
-          mean_precip = get_mean_data(santa_fe_WN_dts, santa_fe_WN_prcp, ncfr_dt, ncfr_dt2)
-          runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_areas[1]) 
-      elif peak_watersheds[i] == "WN":
-        try:
-          mean_discharge = get_mean_data(whittier_dts, whittier_Qs, ncfr_dt, ncfr_dt2)
-          mean_precip = get_mean_data(santa_fe_WN_dts, santa_fe_WN_prcp, ncfr_dt, ncfr_dt2)
-          runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_areas[1]) 
-        except:
-          mean_discharge = get_mean_data(sepulveda_dts, sepulveda_Qs, ncfr_dt, ncfr_dt2)
-          mean_precip = get_mean_data(cheeseboro_SP_dts, cheeseboro_SP_prcp, ncfr_dt, ncfr_dt2)
-          runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_areas[0]) 
-      elif peak_watersheds[i] == "SA":
-        try:
-          mean_discharge = get_mean_data(santa_ana_dts, santa_ana_Qs, ncfr_dt, ncfr_dt2)
-          mean_precip = get_mean_data(fremont_SA_dts, fremont_SA_prcp, ncfr_dt, ncfr_dt2)
-          runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_areas[2]) 
-        except:
-          mean_discharge = get_mean_data(whittier_dts, whittier_Qs, ncfr_dt, ncfr_dt2)
-          mean_precip = get_mean_data(santa_fe_WN_dts, santa_fe_WN_prcp, ncfr_dt, ncfr_dt2)
-          runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_areas[1]) 
-      elif peak_watersheds[i] == "SD":
-        try:
-          mean_discharge = get_mean_data(san_diego_dts, san_diego_Qs, ncfr_dt, ncfr_dt2)
-          mean_precip = get_mean_data(elliot_SD_dts, elliot_SD_prcp, ncfr_dt, ncfr_dt2)
-          runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_areas[3]) 
-        except:
-          mean_discharge = np.nan
-          mean_precip = np.nan
-          runoff = np.nan
-          runoff_ratio = np.nan
-
-      # Check if the runoff_ratio equals infinity; set to NaN
-      if runoff_ratio == float('inf'):
-        runoff_ratio = np.nan
+      mean_Q_SP, mean_prcp_SP, runoff_SP, run_ratio_SP = get_stats(sepulveda_dts, sepulveda_Qs, cheeseboro_SP_dts, \
+          cheeseboro_SP_prcp, ncfr_dt, ncfr_dt2, drainage_areas[0])
+      mean_Q_WN, mean_prcp_WN, runoff_WN, run_ratio_WN = get_stats(whittier_dts, whittier_Qs, santa_fe_WN_dts, \
+          santa_fe_WN_prcp, ncfr_dt, ncfr_dt2, drainage_areas[1])
+      mean_Q_SA, mean_prcp_SA, runoff_SA, run_ratio_SA = get_stats(santa_ana_dts, santa_ana_Qs, fremont_SA_dts, \
+          fremont_SA_prcp, ncfr_dt, ncfr_dt2, drainage_areas[2])
+      mean_Q_SD, mean_prcp_SD, runoff_SD, run_ratio_SD = get_stats(san_diego_dts, san_diego_Qs, elliot_SD_dts, \
+          elliot_SD_prcp, ncfr_dt, ncfr_dt2, drainage_areas[3])
     else: # For entries with no max_ref
       # Set all parameters to "NaN"
-      mean_discharge = np.nan
-      mean_precip = np.nan
-      runoff = np.nan
-      runoff_ratio = np.nan
+      mean_Q_SP = np.nan
+      mean_Q_WN = np.nan
+      mean_Q_SA = np.nan
+      mean_Q_SD = np.nan
+      mean_prcp_SP = np.nan
+      mean_prcp_WN = np.nan
+      mean_prcp_SA = np.nan
+      mean_prcp_SD = np.nan
+      runoff_SP = np.nan
+      runoff_WN = np.nan
+      runoff_SA = np.nan
+      runoff_SD = np.nan
+      run_ratio_SP = np.nan
+      run_ratio_WN = np.nan
+      run_ratio_SA = np.nan
+      run_ratio_SD = np.nan
 
     # Append to lists
-    mean_discharges.append(mean_discharge)
-    mean_precips.append(mean_precip)
-    runoffs.append(runoff)
-    runoff_ratios.append(runoff_ratio)
+    mean_Qs_SP.append(mean_Q_SP)
+    mean_Qs_WN.append(mean_Q_WN)
+    mean_Qs_SA.append(mean_Q_SA)
+    mean_Qs_SD.append(mean_Q_SD)
+    mean_prcps_SP.append(mean_prcp_SP)
+    mean_prcps_WN.append(mean_prcp_WN)
+    mean_prcps_SA.append(mean_prcp_SA)
+    mean_prcps_SD.append(mean_prcp_SD)
+    runoffs_SP.append(runoff_SP)
+    runoffs_WN.append(runoff_WN)
+    runoffs_SA.append(runoff_SA)
+    runoffs_SD.append(runoff_SD)
+    run_ratios_SP.append(run_ratio_SP)
+    run_ratios_WN.append(run_ratio_WN)
+    run_ratios_SA.append(run_ratio_SA)
+    run_ratios_SD.append(run_ratio_SD)
 
   ## Save and update the NCFR_Stats.csv file
   # Save as new columns in pandas dataframe
-  ncfr_entries['mean_discharge_cfs'] = mean_discharges 
-  ncfr_entries['mean_precip_mm'] = mean_precips
-  ncfr_entries['runoff_mm'] = runoffs
-  ncfr_entries['runoff_ratio'] = runoff_ratios
+  ncfr_entries['mean_discharge_SP'] = mean_Qs_SP
+  ncfr_entries['mean_discharge_WN'] = mean_Qs_WN 
+  ncfr_entries['mean_discharge_SA'] = mean_Qs_SA
+  ncfr_entries['mean_discharge_SD'] = mean_Qs_SD 
+  ncfr_entries['mean_precip_SP'] = mean_prcps_SP
+  ncfr_entries['mean_precip_WN'] = mean_prcps_WN
+  ncfr_entries['mean_precip_SA'] = mean_prcps_SA
+  ncfr_entries['mean_precip_SD'] = mean_prcps_SD
+  ncfr_entries['runoff_SP'] = runoffs_SP
+  ncfr_entries['runoff_WN'] = runoffs_WN
+  ncfr_entries['runoff_SA'] = runoffs_SA
+  ncfr_entries['runoff_SD'] = runoffs_SD
+  ncfr_entries['runoff_ratio_SP'] = run_ratios_SP
+  ncfr_entries['runoff_ratio_WN'] = run_ratios_WN
+  ncfr_entries['runoff_ratio_SA'] = run_ratios_SA
+  ncfr_entries['runoff_ratio_SD'] = run_ratios_SD
 
   # Export the updated dataframe to csv file
   ncfr_entries.to_csv(ncfr_fp) 
-
 
 if __name__ == '__main__':
   main()
