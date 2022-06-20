@@ -152,10 +152,25 @@ def main():
   # Obtain peak streamflow of entries that have NCFR Propagation Stats
   peak_Qs_SP_prop = peak_Qs_SP[met_inds]
   peak_Qs_WN_prop = peak_Qs_WN[met_inds]
+  peak_Qs_SA_prop = peak_Qs_SA[met_inds]
+  peak_Qs_SD_prop = peak_Qs_SD[met_inds] 
+
+  # Obtain runoff ratio of entries that have NCFR Propagation Stats
+  run_ratios_SP_prop = run_ratios_SP[met_inds]
+  run_ratios_WN_prop = run_ratios_WN[met_inds]
+  run_ratios_SA_prop = run_ratios_SA[met_inds]
+  run_ratios_SD_prop = run_ratios_SD[met_inds]
 
   # Check for "NaN" values and return fresh lists of indices without "NaN"  
   new_inds1, prop_inds1 = organize_nan_data(peak_Qs_SP_prop)
   new_inds2, prop_inds2 = organize_nan_data(peak_Qs_WN_prop)
+  new_inds3, prop_inds3 = organize_nan_data(peak_Qs_SA_prop)
+  new_inds4, prop_inds4 = organize_nan_data(peak_Qs_SD_prop)
+
+  new_inds5, prop_inds5 = organize_nan_data(run_ratios_SP_prop)
+  new_inds6, prop_inds6 = organize_nan_data(run_ratios_WN_prop)
+  new_inds7, prop_inds7 = organize_nan_data(run_ratios_SA_prop)
+  new_inds8, prop_inds8 = organize_nan_data(run_ratios_SD_prop)
 
   # Obtain updated values
   peak_Qs_SP_prop = peak_Qs_SP_prop[new_inds1] * 0.028316847 # convert from cfs to cms
@@ -168,20 +183,67 @@ def main():
   azimuth_WN_prop = azimuth[prop_inds2]
   speed_WN_prop = speed[prop_inds2]
 
+  peak_Qs_SA_prop = peak_Qs_SA_prop[new_inds3] * 0.028316847 # convert from cfs to cms
+  max_refs_SA_prop = max_refs[new_inds3]
+  azimuth_SA_prop = azimuth[prop_inds3]
+  speed_SA_prop = speed[prop_inds3]
+
+  peak_Qs_SD_prop = peak_Qs_SD_prop[new_inds4] * 0.028316847 # convert from cfs to cms
+  max_refs_SD_prop = max_refs[new_inds4]
+  azimuth_SD_prop = azimuth[prop_inds4]
+  speed_SD_prop = speed[prop_inds4]
+
+  run_ratios_SP_prop = run_ratios_SP_prop[new_inds5]
+  max_refs_SP_prop2 = max_refs[new_inds5]
+  azimuth_SP_prop2 = azimuth[prop_inds5]
+  speed_SP_prop2 = speed[prop_inds5]
+
+  run_ratios_WN_prop = run_ratios_WN_prop[new_inds6]
+  max_refs_WN_prop2 = max_refs[new_inds6]
+  azimuth_WN_prop2 = azimuth[prop_inds6]
+  speed_WN_prop2 = speed[prop_inds6]
+
+  run_ratios_SA_prop = run_ratios_SA_prop[new_inds7]
+  max_refs_SA_prop2 = max_refs[new_inds7]
+  azimuth_SA_prop2 = azimuth[prop_inds7]
+  speed_SA_prop2 = speed[prop_inds7]
+
+  run_ratios_SD_prop = run_ratios_SD_prop[new_inds8]
+  max_refs_SD_prop2 = max_refs[new_inds8]
+  azimuth_SD_prop2 = azimuth[prop_inds8]
+  speed_SD_prop2 = speed[prop_inds8]
+
   ## Implement Multiple Linear Regression
   X1, y1, predictedY1, r_squared1, a1 = run_LA_regression(azimuth_SP_prop, speed_SP_prop, peak_Qs_SP_prop, \
       max_refs_SP_prop) 
   X2, y2, predictedY2, r_squared2, a2 = run_LA_regression(azimuth_WN_prop, speed_WN_prop, peak_Qs_WN_prop, \
       max_refs_WN_prop)
+  X3, y3, predictedY3, r_squared3, a3 = run_LA_regression(azimuth_SA_prop, speed_SA_prop, peak_Qs_SA_prop, \
+      max_refs_SA_prop)
+  X4, y4, predictedY4, r_squared4, a4 = run_LA_regression(azimuth_SD_prop, speed_SD_prop, peak_Qs_SD_prop, \
+      max_refs_SD_prop)
 
-  print("------------------") # Print dividing line for readability
+  X5, y5, predictedY5, r_squared5, a5 = run_LA_regression(azimuth_SP_prop2, speed_SP_prop2, run_ratios_SP_prop, \
+      max_refs_SP_prop2)
+  X6, y6, predictedY6, r_squared6, a6 = run_LA_regression(azimuth_WN_prop2, speed_WN_prop2, run_ratios_WN_prop, \
+      max_refs_WN_prop2)
+  X7, y7, predictedY7, r_squared7, a7 = run_LA_regression(azimuth_SA_prop2, speed_SA_prop2, run_ratios_SA_prop, \
+      max_refs_SA_prop2)
+  X8, y8, predictedY8, r_squared8, a8 = run_LA_regression(azimuth_SD_prop2, speed_SD_prop2, run_ratios_SD_prop, \
+      max_refs_SD_prop2)
+
+  print("\n") # New line for readability
 
   ### 3D Plots
   ## Storm speed and Direction vs. Peak Discharge
   X11, y1, predictedY11, r_squared11, a11 = run_LA_regression(azimuth_SP_prop, speed_SP_prop, peak_Qs_SP_prop)
   combinedArrays1, Z1 = create_3D_mesh(X11, a11)
   X21, y2, predictedY21, r_squared21, a21 = run_LA_regression(azimuth_WN_prop, speed_WN_prop, peak_Qs_WN_prop)
-  combinedArrays2, Z2 = create_3D_mesh(X11, a21)
+  combinedArrays2, Z2 = create_3D_mesh(X21, a21)
+  X31, y3, predictedY31, r_squared31, a31 = run_LA_regression(azimuth_SA_prop, speed_SA_prop, peak_Qs_SA_prop)
+  combinedArrays3, Z3 = create_3D_mesh(X31, a31)
+  X41, y4, predictedY41, r_squared41, a41 = run_LA_regression(azimuth_SD_prop, speed_SD_prop, peak_Qs_SD_prop)
+  combinedArrays4, Z4 = create_3D_mesh(X41, a41)
 
   # Graph everything together
   ## Sepulveda Dam
@@ -210,7 +272,7 @@ def main():
   ax.view_init(elev = 14, azim = -49)
 
   # Save Plot
-  # plt.savefig('./plots/3D_streamflow_SP')
+  plt.savefig('./plots/3D_streamflow_SP')
 
   ## Whittier Narrows Dam
   fig = plt.figure(2)
@@ -237,14 +299,185 @@ def main():
   ax.view_init(elev = 14, azim = -49)
 
   # Save Plot
-  # plt.savefig('./plots/3D_streamflow_WN')
+  plt.savefig('./plots/3D_streamflow_WN')
 
-  plt.show()
+  ## Santa Ana River
+  fig = plt.figure(3)
+  ax = fig.add_subplot(111, projection = '3d')
+  
+  # Plot the data points and wire mesh
+  ax.scatter(X31[:, 0], X31[:, 1], y3, color = "r", label = "Actual Streamflow")
+  ax.scatter(X31[:, 0], X31[:, 1], predictedY31, color = "g", label = "Predicted Streamflow")
+  ax.plot_trisurf(combinedArrays3[:, 0], combinedArrays3[:, 1], Z3, alpha = 0.5)
+  
+  # Add labels, legend, and title
+  ax.set_xlabel("Direction "r"$[^\circ]$")
+  ax.set_ylabel("Speed [m/s]")
+  ax.set_zlabel("Peak Streamflow "r"$[m^{3}/s]$")
+  ax.set_zlim(0) # Set the minimum value on z axis to 0
+  ax.legend()
+  ax.set_title("Santa Ana River")
+
+  # Add R-squared value and equation to plot
+  ax.text(-145, 5, 405, r"$Q = {0} + {1}*a + {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a31[2], a31[0], \
+      a31[1], 2, r_squared31))
+ 
+  # Set the default viewing position for 3D plot
+  ax.view_init(elev = 14, azim = -49)
+
+  # Save Plot
+  plt.savefig('./plots/3D_streamflow_SA')
+
+  ## San Diego River
+  fig = plt.figure(4)
+  ax = fig.add_subplot(111, projection = '3d')
+  
+  # Plot the data points and wire mesh
+  ax.scatter(X41[:, 0], X41[:, 1], y4, color = "r", label = "Actual Streamflow")
+  ax.scatter(X41[:, 0], X41[:, 1], predictedY41, color = "g", label = "Predicted Streamflow")
+  ax.plot_trisurf(combinedArrays4[:, 0], combinedArrays4[:, 1], Z4, alpha = 0.5)
+  
+  # Add labels, legend, and title
+  ax.set_xlabel("Direction "r"$[^\circ]$")
+  ax.set_ylabel("Speed [m/s]")
+  ax.set_zlabel("Peak Streamflow "r"$[m^{3}/s]$")
+  ax.set_zlim(0) # Set the minimum value on z axis to 0
+  ax.legend()
+  ax.set_title("San Diego River")
+
+  # Add R-squared value and equation to plot
+  ax.text(-145, 5, 115, r"$Q = {0} + {1}*a + {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a41[2], a41[0], \
+      a41[1], 2, r_squared41))
+ 
+  # Set the default viewing position for 3D plot
+  ax.view_init(elev = 14, azim = -49)
+
+  # Save Plot
+  plt.savefig('./plots/3D_streamflow_SD')
+
+  ## Storm Speed and Direction vs. Runoff Ratio
+  X51, y5, predictedY51, r_squared51, a51 = run_LA_regression(azimuth_SP_prop2, speed_SP_prop2, run_ratios_SP_prop)
+  combinedArrays5, Z5 = create_3D_mesh(X51, a51)
+  X61, y6, predictedY61, r_squared61, a61 = run_LA_regression(azimuth_WN_prop2, speed_WN_prop2, run_ratios_WN_prop)
+  combinedArrays6, Z6 = create_3D_mesh(X61, a61)
+  X71, y7, predictedY71, r_squared71, a71 = run_LA_regression(azimuth_SA_prop2, speed_SA_prop2, run_ratios_SA_prop)
+  combinedArrays7, Z7 = create_3D_mesh(X71, a71)
+  X81, y8, predictedY81, r_squared81, a81 = run_LA_regression(azimuth_SD_prop2, speed_SD_prop2, run_ratios_SD_prop)
+  combinedArrays8, Z8 = create_3D_mesh(X81, a81)
+
+  ## Sepulveda Dam 
+  # Create fig and axes
+  fig = plt.figure(5)
+  ax = fig.add_subplot(111, projection = '3d')
+  
+  # Plot the data points and wire mesh
+  ax.scatter(X51[:, 0], X51[:, 1], y5, color = "r", label = "Actual Runoff Ratio")
+  ax.scatter(X51[:, 0], X51[:, 1], predictedY51, color = "g", label = "Predicted Runoff Ratio")
+  ax.plot_trisurf(combinedArrays5[:, 0], combinedArrays5[:, 1], Z5, alpha = 0.5)
+  
+  # Add labels, legend, and title
+  ax.set_xlabel("Direction "r"$[^\circ]$")
+  ax.set_ylabel("Speed [m/s]")
+  ax.set_zlabel("Runoff Ratio")
+  ax.set_zlim(0) # Set the minimum value on z axis to 0
+  ax.legend()
+  ax.set_title("Sepulveda Dam")
+
+  # Add R-squared value and equation to plot
+  ax.text(-145, 5, 5, r"$Q = {0} + {1}*a {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a51[2], a51[0], \
+      a51[1], 2, r_squared51))
+ 
+  # Set the default viewing position for 3D plot
+  ax.view_init(elev = 14, azim = -49)
+
+  # Save Plot
+  plt.savefig('./plots/3D_runoff_ratio_SP')
+
+  ## Whittier Narrows Dam 
+  # Create fig and axes
+  fig = plt.figure(6)
+  ax = fig.add_subplot(111, projection = '3d')
+  
+  # Plot the data points and wire mesh
+  ax.scatter(X61[:, 0], X61[:, 1], y6, color = "r", label = "Actual Runoff Ratio")
+  ax.scatter(X61[:, 0], X61[:, 1], predictedY61, color = "g", label = "Predicted Runoff Ratio")
+  ax.plot_trisurf(combinedArrays6[:, 0], combinedArrays6[:, 1], Z6, alpha = 0.5)
+  
+  # Add labels, legend, and title
+  ax.set_xlabel("Direction "r"$[^\circ]$")
+  ax.set_ylabel("Speed [m/s]")
+  ax.set_zlabel("Runoff Ratio")
+  ax.set_zlim(0) # Set the minimum value on z axis to 0
+  ax.legend()
+  ax.set_title("Whittier Narrows Dam")
+
+  # Add R-squared value and equation to plot
+  ax.text(-125, 7, 3.25, r"$Q = {0} + {1}*a {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a61[2], a61[0], \
+      a61[1], 2, r_squared61))
+ 
+  # Set the default viewing position for 3D plot
+  ax.view_init(elev = 14, azim = -49)
+
+  # Save Plot
+  plt.savefig('./plots/3D_runoff_ratio_WN')
+
+  ## Santa Ana River
+  # Create fig and axes
+  fig = plt.figure(7)
+  ax = fig.add_subplot(111, projection = '3d')
+  
+  # Plot the data points and wire mesh
+  ax.scatter(X71[:, 0], X71[:, 1], y7, color = "r", label = "Actual Runoff Ratio")
+  ax.scatter(X71[:, 0], X71[:, 1], predictedY71, color = "g", label = "Predicted Runoff Ratio")
+  ax.plot_trisurf(combinedArrays7[:, 0], combinedArrays7[:, 1], Z7, alpha = 0.5)
+  
+  # Add labels, legend, and title
+  ax.set_xlabel("Direction "r"$[^\circ]$")
+  ax.set_ylabel("Speed [m/s]")
+  ax.set_zlabel("Runoff Ratio")
+  ax.set_zlim(0) # Set the minimum value on z axis to 0
+  ax.legend()
+  ax.set_title("Santa Ana River")
+
+  # Add R-squared value and equation to plot
+  ax.text(-125, 7, 0.075, r"$Q = {0} + {1}*a + {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a71[2], a71[0], \
+      a71[1], 2, r_squared71))
+ 
+  # Set the default viewing position for 3D plot
+  ax.view_init(elev = 14, azim = -49)
+
+  # Save Plot
+  plt.savefig('./plots/3D_runoff_ratio_SA')
+
+  ## San Diego River
+  # Create fig and axes
+  fig = plt.figure(8)
+  ax = fig.add_subplot(111, projection = '3d')
+  
+  # Plot the data points and wire mesh
+  ax.scatter(X81[:, 0], X81[:, 1], y8, color = "r", label = "Actual Runoff Ratio")
+  ax.scatter(X81[:, 0], X81[:, 1], predictedY81, color = "g", label = "Predicted Runoff Ratio")
+  ax.plot_trisurf(combinedArrays8[:, 0], combinedArrays8[:, 1], Z8, alpha = 0.5)
+  
+  # Add labels, legend, and title
+  ax.set_xlabel("Direction "r"$[^\circ]$")
+  ax.set_ylabel("Speed [m/s]")
+  ax.set_zlabel("Runoff Ratio")
+  ax.set_zlim(0) # Set the minimum value on z axis to 0
+  ax.legend()
+  ax.set_title("San Diego River")
+
+  # Add R-squared value and equation to plot
+  ax.text(-125, 7, 0.175, r"$Q = {0} + {1}*a + {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a81[2], a81[0], \
+      a81[1], 2, r_squared81))
+ 
+  # Set the default viewing position for 3D plot
+  ax.view_init(elev = 14, azim = -49)
+
+  # Save Plot
+  plt.savefig('./plots/3D_runoff_ratio_SD')
+
+  # plt.show()
 
 if __name__ == '__main__':
   main()
-
-
-
-# Max reflectivity, storm speed, storm direction vs. peak discharge
-# Max reflectivity, storm speed, storm direction vs. runoff ratio
