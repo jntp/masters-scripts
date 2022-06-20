@@ -192,7 +192,7 @@ def new_map(fig, lon, lat):
   proj = ccrs.LambertConformal(central_longitude = lon, central_latitude = lat)
 
   # New axes with the specified projection
-  ax = fig.add_axes([0.02, 0.02, 0.96, 0.96], projection = proj)
+  ax = fig.add_axes([0.08, 0.04, 0.96, 0.96], projection = proj)
 
   # Add coastlines and states
   ax.add_feature(cfeature.COASTLINE.with_scale('50m'), linewidth = 2)
@@ -279,7 +279,7 @@ def main():
   ## Find the average total precipitation per NCFR event
   grib_avg_prcp = grib_total_prcps / grib_num_events
   
-  ## Plot the data
+  ### Plot the data
   # Specify a central longitude and latitude (i.e. reference point)
   central_lon = -117.636 
   central_lat = 33.818
@@ -303,17 +303,28 @@ def main():
   # Separate x, y from out_xyz
   grib_x = out_xyz[:, :, 0] 
   grib_y = out_xyz[:, :, 1]
- 
+
+  ## Total Precipitation from NCFR Events (1995-2020)
   # Create the contour plot
   grib_contour = ax.contourf(grib_x, grib_y, grib_total_prcps)
 
   # Set title and labels for x and y axis
-  ax.set_title("QPE - Total Precipitation (1995)") 
+  ax.set_title("QPE - Total Precipitation from NCFR Events (1995-2020)")  
 
   # Add color bar
-  cbar = fig.colorbar(grib_contour)
+  cbar = fig.colorbar(grib_contour, pad = 0.05, shrink = 0.6)
   cbar.ax.set_ylabel("Precipitation (mm)")
+  
+  # Set x and y ticks and labels
+  xtics = np.arange(-300000, 400000, 100000)
+  ytics = np.arange(-200000, 300000, 100000)
+  ax.set_xticks(xtics)
+  ax.set_xticklabels([r"$121^\circ W$", r"$120^\circ W$", r"$119^\circ W$", r"$118^\circ W$", \
+          r"$117^\circ W$", r"$116^\circ W$", r"$115^\circ W$"])
+  ax.set_yticks(ytics)
+  ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
 
+  ## Percent of Normal Annual Precipitation
   plt.show()
   
 
