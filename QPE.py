@@ -233,7 +233,7 @@ def main():
   grib_lats = np.array([])
   grib_total_hours = 0
   grib_num_events = 0
-  grib_num_years = 1 # change this later (when running entire code)
+  grib_num_years = 26
 
   for index in indexes:
     # Get entry information
@@ -244,34 +244,30 @@ def main():
     start_hour = ncfr_entry["Start_Hour"]
     end_hour = ncfr_entry["End_Hour"]
   
-    # Test (only temporary) 
-    if year == 1995:
-      # Get precipitation and number of hours for each NCFR event 
-      prcp, event_hours, lats, lons = get_netcdf_prcp(year, month, day, start_hour, end_hour)
+    # Get precipitation and number of hours for each NCFR event 
+    prcp, event_hours, lats, lons = get_netcdf_prcp(year, month, day, start_hour, end_hour)
 
-      # Add event_hours to total number of hours; will be used to calculate avg rain rates
-      grib_total_hours += event_hours
+    # Add event_hours to total number of hours; will be used to calculate avg rain rates
+    grib_total_hours += event_hours
 
-      # Aggregate prcp to grib_total_prcps array
-      # Check if the grib_total_prcps array is empty, set that equal to prcp (first iteration)
-      if grib_total_prcps.size == 0:
-        grib_total_prcps = prcp 
-      else:
-        # Add the precip values together
-        grib_total_prcps = np.add(grib_total_prcps, prcp)
-
-      # Set lons and lats to grib_lons and grib_lats; will be used for plotting
-      if grib_lons.size == 0 and grib_lats.size == 0:
-        grib_lons = lons
-        grib_lats = lats
-
-      # Increment the number of events by 1
-      grib_num_events += 1
+    # Aggregate prcp to grib_total_prcps array
+    # Check if the grib_total_prcps array is empty, set that equal to prcp (first iteration)
+    if grib_total_prcps.size == 0:
+      grib_total_prcps = prcp 
     else:
-      continue
+      # Add the precip values together
+      grib_total_prcps = np.add(grib_total_prcps, prcp)
+
+    # Set lons and lats to grib_lons and grib_lats; will be used for plotting
+    if grib_lons.size == 0 and grib_lats.size == 0:
+      grib_lons = lons
+      grib_lats = lats
+
+    # Increment the number of events by 1
+    grib_num_events += 1
     
   ## Find the percent of normal annual precipitation (total NCFR precip year/total precip year)
-  prop_normal_prcp = grib_total_prcps / (climo_prcp * grib_num_years)
+  prop_normal_prcp = (grib_total_prcps / (climo_prcp * grib_num_years)) * 100
 
   ## Find the average rainfall rate for each NCFR event
   grib_rain_rate = grib_total_prcps / grib_total_hours
@@ -280,19 +276,10 @@ def main():
   grib_avg_prcp = grib_total_prcps / grib_num_events
   
   ### Plot the data
+  ## Get x and y coordinates
   # Specify a central longitude and latitude (i.e. reference point)
   central_lon = -117.636 
   central_lat = 33.818
-
-  # Create a new figure and map 
-  fig = plt.figure(figsize = (10, 10))
-  ax = new_map(fig, central_lon, central_lat) # -117.636, 33.818 
-
-  # Set limits in lat/lon 
-  ax.set_extent([-121, -114, 32, 36]) # SoCal
-
-  # Get color table and value mapping info for the NWS Reflectivity data (test and temporary)
-  ref_norm, ref_cmap = mpplots.ctables.registry.get_with_steps('NWSReflectivity', 5, 5)
 
   # Transform to this projection
   use_proj = ccrs.LambertConformal(central_longitude = central_lon, central_latitude = central_lat)
@@ -303,8 +290,15 @@ def main():
   # Separate x, y from out_xyz
   grib_x = out_xyz[:, :, 0] 
   grib_y = out_xyz[:, :, 1]
-
+ 
   ## Total Precipitation from NCFR Events (1995-2020)
+  # Create a new figure and map 
+  fig = plt.figure(1, figsize = (10, 10))
+  ax = new_map(fig, central_lon, central_lat) # -117.636, 33.818 
+
+  # Set limits in lat/lon 
+  ax.set_extent([-121, -114, 32, 36]) # SoCal
+
   # Create the contour plot
   grib_contour = ax.contourf(grib_x, grib_y, grib_total_prcps)
 
@@ -313,7 +307,7 @@ def main():
 
   # Add color bar
   cbar = fig.colorbar(grib_contour, pad = 0.05, shrink = 0.6)
-  cbar.ax.set_ylabel("Precipitation (mm)")
+  cbar.ax.set_ylabel("Precipitation [mm]")
   
   # Set x and y ticks and labels
   xtics = np.arange(-300000, 400000, 100000)
@@ -324,8 +318,98 @@ def main():
   ax.set_yticks(ytics)
   ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
 
+  # Save Plot
+  plt.savefig('./plots/QPE_total_precip')
+
   ## Percent of Normal Annual Precipitation
-  plt.show()
+  # Create a new figure and map 
+  fig = plt.figure(2, figsize = (10, 10))
+  ax = new_map(fig, central_lon, central_lat) # -117.636, 33.818 
+
+  # Set limits in lat/lon 
+  ax.set_extent([-121, -114, 32, 36]) # SoCal
+
+  # Create the contour plot
+  grib_contour = ax.contourf(grib_x, grib_y, prop_normal_prcp)
+
+  # Set title and labels for x and y axis
+  ax.set_title("QPE - Percent of Normal Annual Precipitation from NCFR Events (1995-2020)")  
+
+  # Add color bar
+  cbar = fig.colorbar(grib_contour, pad = 0.05, shrink = 0.6)
+  cbar.ax.set_ylabel("Percent of Normal Precipitation [%]")
+  
+  # Set x and y ticks and labels
+  xtics = np.arange(-300000, 400000, 100000)
+  ytics = np.arange(-200000, 300000, 100000)
+  ax.set_xticks(xtics)
+  ax.set_xticklabels([r"$121^\circ W$", r"$120^\circ W$", r"$119^\circ W$", r"$118^\circ W$", \
+          r"$117^\circ W$", r"$116^\circ W$", r"$115^\circ W$"])
+  ax.set_yticks(ytics)
+  ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
+
+  # Save Plot
+  plt.savefig('./plots/QPE_percent_normal_precip')
+
+  ## Average Rainfall Rate
+  # Create a new figure and map 
+  fig = plt.figure(3, figsize = (10, 10))
+  ax = new_map(fig, central_lon, central_lat) # -117.636, 33.818 
+
+  # Set limits in lat/lon 
+  ax.set_extent([-121, -114, 32, 36]) # SoCal
+
+  # Create the contour plot
+  grib_contour = ax.contourf(grib_x, grib_y, grib_rain_rate)
+
+  # Set title and labels for x and y axis
+  ax.set_title("QPE - Average Rain Rate of NCFR Events (1995-2020)")  
+
+  # Add color bar
+  cbar = fig.colorbar(grib_contour, pad = 0.05, shrink = 0.6)
+  cbar.ax.set_ylabel("Rain rate [mm/h]")
+  
+  # Set x and y ticks and labels
+  xtics = np.arange(-300000, 400000, 100000)
+  ytics = np.arange(-200000, 300000, 100000)
+  ax.set_xticks(xtics)
+  ax.set_xticklabels([r"$121^\circ W$", r"$120^\circ W$", r"$119^\circ W$", r"$118^\circ W$", \
+          r"$117^\circ W$", r"$116^\circ W$", r"$115^\circ W$"])
+  ax.set_yticks(ytics)
+  ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
+
+  # Save Plot
+  plt.savefig('./plots/QPE_rain_rate')
+
+  ## Average Total Precipitation per NCFR Event
+  # Create a new figure and map 
+  fig = plt.figure(4, figsize = (10, 10))
+  ax = new_map(fig, central_lon, central_lat) # -117.636, 33.818 
+
+  # Set limits in lat/lon 
+  ax.set_extent([-121, -114, 32, 36]) # SoCal
+
+  # Create the contour plot
+  grib_contour = ax.contourf(grib_x, grib_y, grib_avg_prcp)
+
+  # Set title and labels for x and y axis
+  ax.set_title("QPE - Average Total Precipitation per NCFR Event (1995-2020)")  
+
+  # Add color bar
+  cbar = fig.colorbar(grib_contour, pad = 0.05, shrink = 0.6)
+  cbar.ax.set_ylabel("Precipitation per event [mm/event]")
+  
+  # Set x and y ticks and labels
+  xtics = np.arange(-300000, 400000, 100000)
+  ytics = np.arange(-200000, 300000, 100000)
+  ax.set_xticks(xtics)
+  ax.set_xticklabels([r"$121^\circ W$", r"$120^\circ W$", r"$119^\circ W$", r"$118^\circ W$", \
+          r"$117^\circ W$", r"$116^\circ W$", r"$115^\circ W$"])
+  ax.set_yticks(ytics)
+  ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
+
+  # Save Plot
+  plt.savefig('./plots/QPE_avg_total_precip')
   
 
 if __name__ == '__main__':
