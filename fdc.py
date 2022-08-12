@@ -27,6 +27,13 @@ def load_flood_freq_data(file_path):
 
   return peaks_Q, probs_P
 
+def sort_data(prob_Ps, discharge_Qs):
+  # Sort the discharge so that it is monotically decreasing with higher exceedance probabilities
+  discharge_Qs_st = np.sort(discharge_Qs)[::-1]
+  prob_Ps_st = np.arange(1, len(discharge_Qs_st) + 1) / len(discharge_Qs_st)
+
+  return prob_Ps_st, discharge_Qs_st
+ 
 def make_line_smooth(prob_Ps, discharge_Qs, intervals = 200):
   # Estimate spline curve coefficients, then use coeffs to determine y-values for evenly-spaced x-values
   P_Q_spline = make_interp_spline(prob_Ps, discharge_Qs) 
@@ -57,33 +64,39 @@ def main():
   san_diego_Qs, san_diego_Ps = load_flood_freq_data(san_diego_fp)
 
   ## Prepare data for plotting
+  # Sort the data
+  sepulveda_Ps_st, sepulveda_Qs_st = sort_data(sepulveda_Ps, sepulveda_Qs)
+  whittier_Ps_st, whittier_Qs_st = sort_data(whittier_Ps, whittier_Qs)
+  santa_ana_Ps_st, santa_ana_Qs_st = sort_data(santa_ana_Ps, santa_ana_Qs)
+  san_diego_Ps_st, san_diego_Qs_st = sort_data(san_diego_Ps, san_diego_Qs)
+ 
   # Transform the lines into a smooth curves
-  sepulveda_Ps_cv, sepulveda_Qs_cv = make_line_smooth(sepulveda_Ps, sepulveda_Qs)
-  whittier_Ps_cv, whittier_Qs_cv = make_line_smooth(whittier_Ps, whittier_Qs)
-  santa_ana_Ps_cv, santa_ana_Qs_cv = make_line_smooth(santa_ana_Ps, santa_ana_Qs)
-  san_diego_Ps_cv, san_diego_Qs_cv = make_line_smooth(san_diego_Ps, san_diego_Qs)
+  # sepulveda_Ps_cv, sepulveda_Qs_cv = make_line_smooth(sepulveda_Ps_st * 100, sepulveda_Qs_st)
+  # whittier_Ps_cv, whittier_Qs_cv = make_line_smooth(whittier_Ps_st * 100, whittier_Qs_st)
+  # santa_ana_Ps_cv, santa_ana_Qs_cv = make_line_smooth(santa_ana_Ps_st * 100, santa_ana_Qs_st)
+  # san_diego_Ps_cv, san_diego_Qs_cv = make_line_smooth(san_diego_Ps_st * 100, san_diego_Qs_st)
 
   # Interpolate values
-  sepulveda_median = get_median_streamflow(sepulveda_Ps_cv, sepulveda_Qs_cv)
-  whittier_median = get_median_streamflow(whittier_Ps_cv, whittier_Qs_cv)
-  santa_ana_median = get_median_streamflow(santa_ana_Ps_cv, santa_ana_Qs_cv)
-  san_diego_median = get_median_streamflow(san_diego_Ps_cv, san_diego_Qs_cv)
+  sepulveda_median = get_median_streamflow(sepulveda_Ps_st * 100, sepulveda_Qs_st)
+  whittier_median = get_median_streamflow(whittier_Ps_st * 100, whittier_Qs_st)
+  santa_ana_median = get_median_streamflow(santa_ana_Ps_st * 100, santa_ana_Qs_st)
+  san_diego_median = get_median_streamflow(san_diego_Ps_st * 100, san_diego_Qs_st)
 
   # Adjust the figure size
   plt.rcParams["figure.figsize"] = [7.00, 3.50]
   plt.rcParams["figure.autolayout"] = True
 
   # Plot the lines (including median lines)
-  plt.plot(sepulveda_Ps_cv, sepulveda_Qs_cv, label = "Sepulveda Dam", color = "blue", zorder = 2)
+  plt.plot(sepulveda_Ps_st * 100, sepulveda_Qs_st, label = "Sepulveda Dam", color = "blue", zorder = 2)
   plt.axhline(y = sepulveda_median, xmax = 0.5, color = "blue", linestyle = "--", zorder = 1, alpha = 0.5)
   
-  plt.plot(whittier_Ps_cv, whittier_Qs_cv, label = "Whittier Narrows Dam", color = "green", zorder = 2)
+  plt.plot(whittier_Ps_st * 100, whittier_Qs_st, label = "Whittier Narrows Dam", color = "green", zorder = 2)
   plt.axhline(y = whittier_median, xmax = 0.5, color = "green", linestyle = "--", zorder = 1, alpha = 0.5)
   
-  plt.plot(santa_ana_Ps_cv, santa_ana_Qs_cv, label = "Santa Ana River", color = "orange", zorder = 2)
+  plt.plot(santa_ana_Ps_st * 100, santa_ana_Qs_st, label = "Santa Ana River", color = "orange", zorder = 2)
   plt.axhline(y = santa_ana_median, xmax = 0.5, color = "orange", linestyle = "--", zorder = 1, alpha = 0.5)
   
-  plt.plot(san_diego_Ps_cv, san_diego_Qs_cv, label = "San Diego River", color = "purple", zorder = 2)
+  plt.plot(san_diego_Ps_st * 100, san_diego_Qs_st, label = "San Diego River", color = "purple", zorder = 2)
   plt.axhline(y = san_diego_median, xmax = 0.5, color = "purple", linestyle = "--", zorder = 1, alpha = 0.5)
 
   plt.axvline(x = 50, label = "Median (2-yr)", color = "red", linestyle = "--", zorder = 2, alpha = 0.5)
