@@ -125,6 +125,23 @@ def create_3D_mesh(X1, a):
  
   return combinedArrays, Z
 
+def find_collinearity(X):
+  # Create a pandas dataframe out of the variables
+  X_df = pd.DataFrame({'max_ref': X[:, 0], 'azimuth': X[:, 1], 'speed': X[:, 2], 'intercept': X[:, 3]})
+  
+  # Calculate the Pearson Correlation Coefficient of the variables
+  X_corr = X_df.corr()
+
+  # Create a new pandas dataframe to calculate the variance inflation factor (VIF)
+  vif_data = pd.DataFrame()
+  vif_data['feature'] = X_df.columns
+  
+  # Calculate the VIF for each feature
+  vif_data['VIF'] = [variance_inflation_factor(X_df.values, i) for i in range(len(X_df.columns))]
+  
+  # Return the two results
+  return X_corr, vif_data
+
 
 def main():
   ### Multiple Regression Stats (Four Variables)
@@ -222,60 +239,73 @@ def main():
       max_refs_SP_prop)
   model1 = sm.OLS(y1, X1).fit()
   print(model1.summary())
- 
-
-  X1_df = pd.DataFrame({'max_ref': X1[:, 0], 'azimuth': X1[:, 1], 'speed': X1[:, 2]})
-  
-  # Set figure size
-  # plt.figure(figsize = (10, 7))
-
-  # Generate a mask to only show the bottom triangle
-  print(X1_df.corr())
-
-  vif_data = pd.DataFrame()
-  vif_data['feature'] = X1_df.columns
-  
-  # Calculate the VIF for each feature
-  vif_data['VIF'] = [variance_inflation_factor(X1_df.values, i) for i in range(len(X1_df.columns))]
-  print(vif_data)
-
-  # Left off removing a feature and then calculating VIF again
+  X1_corr, X1_vif = find_collinearity(X1)
+  print(X1_corr)
+  print(X1_vif)
+  print("\n") # new line for readability 
 
   X2, y2, predictedY2, r_squared2, a2 = run_LA_regression(azimuth_WN_prop, speed_WN_prop, peak_Qs_WN_prop, \
       max_refs_WN_prop)
   model2 = sm.OLS(y2, X2).fit()
   print(model2.summary())
+  X2_corr, X2_vif = find_collinearity(X2)
+  print(X2_corr)
+  print(X2_vif)
+  print("\n") # new line for readability 
 
   X3, y3, predictedY3, r_squared3, a3 = run_LA_regression(azimuth_SA_prop, speed_SA_prop, peak_Qs_SA_prop, \
       max_refs_SA_prop)
   model3 = sm.OLS(y3, X3).fit()
   print(model3.summary())
+  X3_corr, X3_vif = find_collinearity(X3)
+  print(X3_corr)
+  print(X3_vif)
+  print("\n") # new line for readability 
 
   X4, y4, predictedY4, r_squared4, a4 = run_LA_regression(azimuth_SD_prop, speed_SD_prop, peak_Qs_SD_prop, \
       max_refs_SD_prop)
   model4 = sm.OLS(y4, X4).fit()
   print(model4.summary())
+  X4_corr, X4_vif = find_collinearity(X4)
+  print(X4_corr)
+  print(X4_vif)
+  print("\n") # new line for readability 
 
   # Max Reflectivity, Speed, Azimuth vs. Runoff Ratio (all 4 watersheds)
   X5, y5, predictedY5, r_squared5, a5 = run_LA_regression(azimuth_SP_prop2, speed_SP_prop2, run_ratios_SP_prop, \
       max_refs_SP_prop2)
   model5 = sm.OLS(y5, X5).fit()
   print(model5.summary())
+  X5_corr, X5_vif = find_collinearity(X5)
+  print(X5_corr)
+  print(X5_vif)
+  print("\n") # new line for readability 
 
   X6, y6, predictedY6, r_squared6, a6 = run_LA_regression(azimuth_WN_prop2, speed_WN_prop2, run_ratios_WN_prop, \
       max_refs_WN_prop2)
   model6 = sm.OLS(y6, X6).fit()
   print(model6.summary())
+  X6_corr, X6_vif = find_collinearity(X6)
+  print(X6_corr)
+  print(X6_vif)
+  print("\n") # new line for readability 
 
   X7, y7, predictedY7, r_squared7, a7 = run_LA_regression(azimuth_SA_prop2, speed_SA_prop2, run_ratios_SA_prop, \
       max_refs_SA_prop2)
   model7 = sm.OLS(y7, X7).fit()
   print(model7.summary())
+  X7_corr, X7_vif = find_collinearity(X7)
+  print(X7_corr)
+  print(X7_vif)
+  print("\n") # new line for readability 
 
   X8, y8, predictedY8, r_squared8, a8 = run_LA_regression(azimuth_SD_prop2, speed_SD_prop2, run_ratios_SD_prop, \
       max_refs_SD_prop2)
   model8 = sm.OLS(y8, X8).fit()
   print(model8.summary())
+  X8_corr, X8_vif = find_collinearity(X8)
+  print(X8_corr)
+  print(X8_vif) 
 
 
 if __name__ == '__main__':
