@@ -266,6 +266,9 @@ def main():
     # Increment the number of events by 1
     grib_num_events += 1
     
+  ## Find the mean annual precipitation from NCFR events
+  mean_annual_prcp = grib_total_prcps / grib_num_years
+
   ## Find the percent of normal annual precipitation (total NCFR precip year/total precip year)
   prop_normal_prcp = (grib_total_prcps / (climo_prcp * grib_num_years)) * 100
 
@@ -291,7 +294,7 @@ def main():
   grib_x = out_xyz[:, :, 0] 
   grib_y = out_xyz[:, :, 1]
  
-  ## Total Precipitation from NCFR Events (1995-2020)
+  ## Mean Annual Precipitation of NCFR Events (1995-2020)
   # Create a new figure and map 
   fig = plt.figure(1, figsize = (10, 10))
   ax = new_map(fig, central_lon, central_lat) # -117.636, 33.818 
@@ -300,14 +303,14 @@ def main():
   ax.set_extent([-121, -114, 32, 36]) # SoCal
 
   # Create the contour plot
-  grib_contour = ax.contourf(grib_x, grib_y, grib_total_prcps)
+  grib_contour = ax.contourf(grib_x, grib_y, mean_annual_prcp)
 
   # Set title and labels for x and y axis
-  ax.set_title("QPE - Total Precipitation from NCFR Events (1995-2020)")  
+  ax.set_title("QPE - Mean Annual Precipitation from NCFR Events (1995-2020)")  
 
   # Add color bar
   cbar = fig.colorbar(grib_contour, pad = 0.05, shrink = 0.6)
-  cbar.ax.set_ylabel("Precipitation [mm]")
+  cbar.ax.set_ylabel("Mean Precipitation per Year [mm/yr]")
   
   # Set x and y ticks and labels
   xtics = np.arange(-300000, 400000, 100000)
@@ -319,7 +322,7 @@ def main():
   ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
 
   # Save Plot
-  plt.savefig('./plots/QPE_total_precip')
+  plt.savefig('./plots/QPE_mean_annual_precip')
 
   ## Percent of Normal Annual Precipitation
   # Create a new figure and map 
@@ -337,7 +340,7 @@ def main():
 
   # Add color bar
   cbar = fig.colorbar(grib_contour, pad = 0.05, shrink = 0.6)
-  cbar.ax.set_ylabel("Percent of Normal Precipitation [%]")
+  cbar.ax.set_ylabel("Percent of Mean Annual Precipitation [%]")
   
   # Set x and y ticks and labels
   xtics = np.arange(-300000, 400000, 100000)
@@ -349,7 +352,7 @@ def main():
   ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
 
   # Save Plot
-  plt.savefig('./plots/QPE_percent_normal_precip')
+  # plt.savefig('./plots/QPE_percent_normal_precip_2')
 
   ## Average Rainfall Rate
   # Create a new figure and map 
@@ -379,7 +382,7 @@ def main():
   ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
 
   # Save Plot
-  plt.savefig('./plots/QPE_rain_rate')
+  # plt.savefig('./plots/QPE_rain_rate')
 
   ## Average Total Precipitation per NCFR Event
   # Create a new figure and map 
@@ -409,12 +412,8 @@ def main():
   ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
 
   # Save Plot
-  plt.savefig('./plots/QPE_avg_total_precip')
+  # plt.savefig('./plots/QPE_avg_total_precip')
   
 
 if __name__ == '__main__':
   main()
-
-# Consider changing the color scheme and also fix the size? (looks out of proportion)
-# Figure out to make multiple plots at once
-# Save the files (test before running all files)
