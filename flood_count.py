@@ -59,7 +59,6 @@ def check_duplicate_events(start_dates, start_dt):
       start_dates.append(start_dt) 
       return start_dates, duplicates_flag
 
-
 def check_threshold(stream_datetimes, stream_Qs, start_datetime, end_datetime, discharge_threshold):
   # Convert datetimes and streamflows to numpy array for array operations
   stream_datetimes = np.array(stream_datetimes)
@@ -145,6 +144,7 @@ def main():
   end_mins_ff = end_mins[right_inds]
 
   # Create another list to store data that meet both FFW criteria and streamflow threshold
+  unique_inds = [] # based on right_inds but without any duplicates
   flood_inds = [] # indices
   results = [] # bool values
   
@@ -165,6 +165,8 @@ def main():
     # Continue to next iteration if event is a duplicate
     if is_duplicate:
       continue
+    else:
+      unique_inds.append(i)
 
     # Check which WFO issued the FFW so we know which watersheds to check
     if wfos_ff[i] == "LOX": 
@@ -202,10 +204,16 @@ def main():
 
   # Get the number of SoCal flood events during the time period
   flood_count = sum(results)
+
+  # Get the number of FFW issued by a WFO
+  FFW_count = len(unique_inds)
+  FFW_dup_count = len(right_inds)
   
   # Print results
   print(flood_inds)
   print("Total Number of Flood Events (1995-2020): ", flood_count)
+  print("Total Number of unique FFWs: ", FFW_count) 
+  print("Total Number of non-unique FFWs: ", FFW_dup_count)
 
 if __name__ == '__main__':
   main()
