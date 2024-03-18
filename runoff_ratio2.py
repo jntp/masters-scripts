@@ -16,6 +16,37 @@ def isOvernight(start_hour, end_hour):
 
 ## Main Functions
 
+def format_date_mdy(mdy_datetime_str):
+  # Figure out what the format of the date string is (MM/DD/YYYY, MM/D/YYYY, M/DD/YYYY, or M/D/YYYY?)
+  # Create the slice objects for the month, day, and year depending on the format
+  
+  if len(mdy_datetime_str) == 10: # MM/DD/YYYY
+    month_slc = slice(0, 2)
+    day_slc = slice(3, 5)
+    year_slc = slice(6, 10)
+  elif len(mdy_datetime_str) == 9: ## M/DD/YYYY or MM/D/YYYY
+    ## Find if the month or the day is double-digit and create slice object accordingly
+    # Parse the month based on a "test slice" 
+    test_month = mdy_datetime_str[slice(0, 2)]
+
+    # Test if the month is valid by converting to an int, will reveal the date format
+    # A valid month would be double-digit, single-digit months would be appear as "M/" which is an invalid
+    # integer
+    try:
+      int(test_month)
+    except: # M/DD/YYYY
+      month_slc = slice(0, 1)
+      day_slc = slice(2, 4)
+      year_slc = slice(5, 9)
+    else: # MM/D/YYYY
+      month_slc = slice(0, 2)
+      day_slc = slice(3, 4)
+      year_slc = slice(5, 9)
+
+    # Test is the code above works!
+
+
+
 def convert_str_to_dt(datetime_str, time_str, code = 0):
   # Code 0 works with datetimes in format YYYY-MM-DD or YYYY/MM/DD (default)
   # Code 1 works with datetimes in format MM/DD/YYYY 
@@ -28,6 +59,9 @@ def convert_str_to_dt(datetime_str, time_str, code = 0):
     month_slc = slice(0, 2)
     day_slc = slice(3, 5)
     year_slc = slice(6, 10)
+    
+    # How to parse M/DD/YYYY or MM/D/YYYY?
+    # What happens if there is no hours or minute?
 
   # Create slice objects for parsing time str
   hour_slc = slice(0, 2)
@@ -69,7 +103,7 @@ def get_mean_data(para_datetimes, para_data, ncfr_dt1, ncfr_dt2):
   para_datetimes = np.array(para_datetimes)
   para_data = np.array(para_data)
     
-  # Look for indices where parameter (streamflow, precip) time is within the ncfr start and end time
+   # Look for indices where parameter (streamflow, precip) time is within the ncfr start and end time
   time_inds = np.where(para_datetimes >= ncfr_dt1 and para_datetimes <= ncfr_dt2)[0][0]
     
   # Find the mean of the two mean data points
@@ -78,7 +112,8 @@ def get_mean_data(para_datetimes, para_data, ncfr_dt1, ncfr_dt2):
 
   return mean_data
 
-# def get_NCFR_precip(ncfr_dt, RAWS_prcps):
+# def get_NCFR_precip(ncfr_dt, ncfr_dt2, RAWS_prcp):
+  # while (
   
 
 def convert_discharge_runoff(discharge, drainage_area, period = 86400):
@@ -131,18 +166,19 @@ def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, 
 def main():
   ## Load the hourly RAWS data
   # Get the file paths
-  cheeseboro_SP_fp = "./data/Cheeseboro_sample_Nov_2023.csv"
+  cheeseboro_SP_fp = "./data/WRCC_CampElliot_RAWS_Data.csv"
 
   datetime = dt.datetime(2023, 11, 26, 18, 30)
   print(datetime) # delete later
 
   # Load hourly precipitation data
-  cheeseboro_SP_dts, cheeseboro_SP_prcp = load_data(cheeseboro_SP_fp, "Date", "Time", "Precip_hr_mm")
-  print(cheeseboro_SP_dts, cheeseboro_SP_prcp)
+  # cheeseboro_SP_dts, cheeseboro_SP_prcp = load_data(cheeseboro_SP_fp, "Date", "Time", "Precip_in", 1)
+  # print(cheeseboro_SP_dts, cheeseboro_SP_prcp)
+  format_date_mdy("12/1/2005")
   # Load for other 3 RAWS sites (left off here... eventually once RAWS data are available)
 
   ## Load data from NCFR_Stats2
-  ncfr_fp = "./data/NCFR_Stats.csv" # perhaps rename to NCFR_Stats2; see entries below to see the default
+  ncfr_fp = "./data/NCFR_Stats2.csv" # perhaps rename to NCFR_Stats2; see entries below to see the default
   ncfr_entries = pd.read_csv(ncfr_fp)
   years = ncfr_entries.loc[:, "Year"]
   months = ncfr_entries.loc[:, "Month"]
@@ -184,11 +220,7 @@ def main():
 
       # Change the 2nd NCFR datetime if it goes overnight or if it ends past 9 pm
       if isOvernight(start_hours[i], end_hours[i]) or end_hours[i] >= 21:
-      ncfr_dt2 = ncfr_dt + dt.timedelta(days = 1)
-
-      # Obtain the precipitation data for each RAWS station for every NCFR event
-
-
+        ncfr_dt2 = ncfr_dt + dt.timedelta(days = 1)
 
       # Retrieve the mean discharge and daily precipitation from the watershed that recorded peak streamflow
       # Calculate runoff ratio immediately after retrieving mean discharge and daily precipitation
@@ -201,6 +233,9 @@ def main():
           fremont_SA_prcp, ncfr_dt, ncfr_dt2, drainage_areas[2])
       mean_Q_SD, mean_prcp_SD, runoff_SD, run_ratio_SD = get_stats(san_diego_dts, san_diego_Qs, elliot_SD_dts, \
           elliot_SD_prcp, ncfr_dt, ncfr_dt2, drainage_areas[3])
+
+      # Obtain the precipitation data for each RAWS station for every NCFR event
+
     else: # For entries with no max_ref
       # Set all parameters to "NaN"
       mean_Q_SP = np.nan
@@ -265,3 +300,5 @@ if __name__ == '__main__':
 
 # Figure out how the RAWS data is organized and change accordingly
 # Move the load precipitation process to main() into a for loop (load precip by NCFR event only)
+# See question on parsing issue in function convert_str_to_dt(...)
+# Left off on format_date_mdy function
