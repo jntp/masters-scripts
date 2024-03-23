@@ -24,7 +24,7 @@ def format_date_mdy(mdy_datetime_str):
     month_slc = slice(0, 2)
     day_slc = slice(3, 5)
     year_slc = slice(6, 10)
-  elif len(mdy_datetime_str) == 9: ## M/DD/YYYY or MM/D/YYYY
+  elif len(mdy_datetime_str) == 9: # M/DD/YYYY or MM/D/YYYY
     ## Find if the month or the day is double-digit and create slice object accordingly
     # Parse the month based on a "test slice" 
     test_month = mdy_datetime_str[slice(0, 2)]
@@ -42,10 +42,12 @@ def format_date_mdy(mdy_datetime_str):
       month_slc = slice(0, 2)
       day_slc = slice(3, 4)
       year_slc = slice(5, 9)
+  elif len(mdy_datetime_str) == 8: # M/D/YYYY
+    month_slc = slice(0, 1)
+    day_slc = slice(2, 3)
+    year_slc = slice(4, 8)
 
-    # Test is the code above works!
-
-
+  return month_slc, day_slc, year_slc
 
 def convert_str_to_dt(datetime_str, time_str, code = 0):
   # Code 0 works with datetimes in format YYYY-MM-DD or YYYY/MM/DD (default)
@@ -56,13 +58,9 @@ def convert_str_to_dt(datetime_str, time_str, code = 0):
     month_slc = slice(5, 7)
     day_slc = slice(8, 10)
   elif code == 1: # MM/DD/YYYY 
-    month_slc = slice(0, 2)
-    day_slc = slice(3, 5)
-    year_slc = slice(6, 10)
+    # Check format (MM/DD/YYYY, M/DD/YYYY, etc.) and format accordingly
+    month_slc, day_slc, year_slc = format_date_mdy(datetime_str) 
     
-    # How to parse M/DD/YYYY or MM/D/YYYY?
-    # What happens if there is no hours or minute?
-
   # Create slice objects for parsing time str
   hour_slc = slice(0, 2)
   minute_slc = slice(3, 5)
@@ -89,6 +87,8 @@ def load_data(file_path, date_str, time_str, parameter_str, code = 0):
   datetimes = []
   times = []
   parameters = []
+
+  # Account for "M" in missing precip data... code = 1 is precip, code = 0 is discharge
 
   # Loop through entries and convert datetime and precipitation data
   for i, datetime in enumerate(datetimes_str):  
@@ -164,6 +164,12 @@ def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, 
   return mean_discharge, mean_precip, runoff, runoff_ratio
 
 def main():
+  ## Load the discharge data from USGS gauges
+  # Get the file paths for the 15 min discharge data
+
+  # Load 15 min discharge data
+
+
   ## Load the hourly RAWS data
   # Get the file paths
   cheeseboro_SP_fp = "./data/WRCC_CampElliot_RAWS_Data.csv"
@@ -172,10 +178,11 @@ def main():
   print(datetime) # delete later
 
   # Load hourly precipitation data
-  # cheeseboro_SP_dts, cheeseboro_SP_prcp = load_data(cheeseboro_SP_fp, "Date", "Time", "Precip_in", 1)
-  # print(cheeseboro_SP_dts, cheeseboro_SP_prcp)
-  format_date_mdy("12/1/2005")
+  cheeseboro_SP_dts, cheeseboro_SP_prcp = load_data(cheeseboro_SP_fp, "Date", "Time", "Precip_in", 1) # Error, see note
+  print(cheeseboro_SP_dts, cheeseboro_SP_prcp)
   # Load for other 3 RAWS sites (left off here... eventually once RAWS data are available)
+
+  # Convert precipitation to mm
 
   ## Load data from NCFR_Stats2
   ncfr_fp = "./data/NCFR_Stats2.csv" # perhaps rename to NCFR_Stats2; see entries below to see the default
@@ -234,7 +241,7 @@ def main():
       mean_Q_SD, mean_prcp_SD, runoff_SD, run_ratio_SD = get_stats(san_diego_dts, san_diego_Qs, elliot_SD_dts, \
           elliot_SD_prcp, ncfr_dt, ncfr_dt2, drainage_areas[3])
 
-      # Obtain the precipitation data for each RAWS station for every NCFR event
+      # Calculate the average precipitation and discharge during NCFR event (INSERT into function above)
 
     else: # For entries with no max_ref
       # Set all parameters to "NaN"
@@ -300,5 +307,4 @@ if __name__ == '__main__':
 
 # Figure out how the RAWS data is organized and change accordingly
 # Move the load precipitation process to main() into a for loop (load precip by NCFR event only)
-# See question on parsing issue in function convert_str_to_dt(...)
-# Left off on format_date_mdy function
+# Left off at fixing error in load_data() function regarding precipitation "M" error
