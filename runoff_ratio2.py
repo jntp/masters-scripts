@@ -88,12 +88,29 @@ def load_data(file_path, date_str, time_str, parameter_str, code = 0):
   times = []
   parameters = []
 
-  # Account for "M" in missing precip data... code = 1 is precip, code = 0 is discharge
-
   # Loop through entries and convert datetime and precipitation data
-  for i, datetime in enumerate(datetimes_str):  
-    datetimes.append(convert_str_to_dt(datetimes_str[i], times_str[i], code))
-  
+  for i, datetime in enumerate(datetimes_str): 
+    # Check if datetime string is H:DD format and change to HH:DD
+    if len(times_str[i]) == 4: # H:DD
+      # Append a zero in front to change format to HH:DD
+      hour_min = "0" + times_str[i]
+    else: # HH:DD
+      # Keep but assign to new variable
+      hour_min = times_str[i]
+
+    datetimes.append(convert_str_to_dt(datetimes_str[i], hour_min, code))
+
+    # Check if precipitation entry contains 'M' and address accordingly
+    if code == 1: # Precipitation Data
+      if parameters_str[i] == 'M':
+        # Check if it is the first entry
+        if i == 0:
+          # Skip to next iteration
+          continue
+        else:
+          # Equate data to the previous entry, which will entail a rain rate of 0 in/hr
+          parameters_str[i] = parameters_str[i-1]
+
     parameters.append(float(parameters_str[i]))
                                                                   
   return datetimes, parameters
@@ -180,6 +197,7 @@ def main():
   # Load hourly precipitation data
   cheeseboro_SP_dts, cheeseboro_SP_prcp = load_data(cheeseboro_SP_fp, "Date", "Time", "Precip_in", 1) # Error, see note
   print(cheeseboro_SP_dts, cheeseboro_SP_prcp)
+  # See dtype warning... address this or not?
   # Load for other 3 RAWS sites (left off here... eventually once RAWS data are available)
 
   # Convert precipitation to mm
@@ -307,4 +325,6 @@ if __name__ == '__main__':
 
 # Figure out how the RAWS data is organized and change accordingly
 # Move the load precipitation process to main() into a for loop (load precip by NCFR event only)
-# Left off at fixing error in load_data() function regarding precipitation "M" error
+# Address ncfr_fp error
+# Calculate the rain rate
+# Dtype warning for loading data? Address this or not?
