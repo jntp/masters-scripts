@@ -78,7 +78,7 @@ def convert_str_to_dt(datetime_str, time_str, code = 0):
   return datetime
 
 def load_data(file_path, date_str, time_str, parameter_str, code = 0):
-  entries = pd.read_csv(file_path)
+  entries = pd.read_csv(file_path, low_memory = False)
   datetimes_str = entries.loc[:, date_str]
   times_str = entries.loc[:, time_str]
   parameters_str = entries.loc[:, parameter_str]
@@ -88,6 +88,9 @@ def load_data(file_path, date_str, time_str, parameter_str, code = 0):
   times = []
   parameters = []
 
+  # Address discharge data (datetime is one)
+
+  # Move the if code == 1 to here
   # Loop through entries and convert datetime and precipitation data
   for i, datetime in enumerate(datetimes_str): 
     # Check if datetime string is H:DD format and change to HH:DD
@@ -183,9 +186,15 @@ def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, 
 def main():
   ## Load the discharge data from USGS gauges
   # Get the file paths for the 15 min discharge data
+  sepulveda_fp = "./data/sepulveda_15min_discharge_2002_2020.csv"
+  whittier_fp = "./data/whittier_15min_discharge_1995_2020.csv" 
+  santa_ana_fp = "./data/santa_ana_15min_discharge_1995_2020.csv"
+  san_diego_fp = "./data/san_diego_15min_discharge_1995_2020.csv"
 
   # Load 15 min discharge data
-
+  sepulveda_dts, sepulveda_Qs = load_data(sepulveda_fp, "datetime", "datetime", "discharge_cfs", 0)
+  whitter_dts, whittier_Qs = load_data(whitter_fp, "datetime", "datetime", "discharge_cfs", 0)
+  # Finish here
 
   ## Load the hourly RAWS data
   # Get the file paths
@@ -203,7 +212,7 @@ def main():
   # Convert precipitation to mm
 
   ## Load data from NCFR_Stats2
-  ncfr_fp = "./data/NCFR_Stats2.csv" # perhaps rename to NCFR_Stats2; see entries below to see the default
+  ncfr_fp = "./data/NCFR_Stats2.csv"
   ncfr_entries = pd.read_csv(ncfr_fp)
   years = ncfr_entries.loc[:, "Year"]
   months = ncfr_entries.loc[:, "Month"]
@@ -325,6 +334,5 @@ if __name__ == '__main__':
 
 # Figure out how the RAWS data is organized and change accordingly
 # Move the load precipitation process to main() into a for loop (load precip by NCFR event only)
-# Address ncfr_fp error
+# Address discrepancy between discharge and precipitation datetimes in load_data()
 # Calculate the rain rate
-# Dtype warning for loading data? Address this or not?
