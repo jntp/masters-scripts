@@ -50,20 +50,22 @@ def format_date_mdy(mdy_datetime_str):
   return month_slc, day_slc, year_slc
 
 def convert_str_to_dt(datetime_str, time_str, code = 0):
-  # Code 0 works with datetimes in format YYYY-MM-DD or YYYY/MM/DD (default)
+  # Code 0 works with datetimes in format YYYY-MM-DD HH:MM
   # Code 1 works with datetimes in format MM/DD/YYYY 
   # Create slice objects for parsing datetime string
   if code == 0: # YYYY-MM-DD
     year_slc = slice(0, 4)
     month_slc = slice(5, 7)
     day_slc = slice(8, 10)
+    hour_slc = slice(11, 13)
+    minute_slc = slice(14, 16)
   elif code == 1: # MM/DD/YYYY 
     # Check format (MM/DD/YYYY, M/DD/YYYY, etc.) and format accordingly
     month_slc, day_slc, year_slc = format_date_mdy(datetime_str) 
     
-  # Create slice objects for parsing time str
-  hour_slc = slice(0, 2)
-  minute_slc = slice(3, 5)
+    # Create slice objects for parsing time str
+    hour_slc = slice(0, 2)
+    minute_slc = slice(3, 5)
 
   # Parse string accordingly
   year = datetime_str[year_slc]
@@ -87,24 +89,25 @@ def load_data(file_path, date_str, time_str, parameter_str, code = 0):
   datetimes = []
   times = []
   parameters = []
-
-  # Address discharge data (datetime is one)
-
-  # Move the if code == 1 to here
+ 
   # Loop through entries and convert datetime and precipitation data
-  for i, datetime in enumerate(datetimes_str): 
-    # Check if datetime string is H:DD format and change to HH:DD
-    if len(times_str[i]) == 4: # H:DD
-      # Append a zero in front to change format to HH:DD
-      hour_min = "0" + times_str[i]
-    else: # HH:DD
-      # Keep but assign to new variable
-      hour_min = times_str[i]
+  for i, datetime in enumerate(datetimes_str):
+    # Some dataframes may have NaN values in the end; check for such values and end the for loop if found
+    if pd.isnull(datetimes_str[i]) or pd.isnull(times_str[i]):
+      break
 
-    datetimes.append(convert_str_to_dt(datetimes_str[i], hour_min, code))
-
-    # Check if precipitation entry contains 'M' and address accordingly
+    # For precipitation data, address formatting issues (H:DD time and 'M' precipitation entries)
     if code == 1: # Precipitation Data
+      print(datetime)
+      # Check if datetime string is H:DD format and change to HH:DD
+      if len(times_str[i]) == 4: # H:DD
+        # Append a zero in front to change format to HH:DD
+        hour_min = "0" + times_str[i]
+      else: # HH:DD
+        # Keep but assign to new variable
+        hour_min = times_str[i]
+
+      # Address entries with 'M' as an entry and skip or assign a float value
       if parameters_str[i] == 'M':
         # Check if it is the first entry
         if i == 0:
@@ -113,6 +116,11 @@ def load_data(file_path, date_str, time_str, parameter_str, code = 0):
         else:
           # Equate data to the previous entry, which will entail a rain rate of 0 in/hr
           parameters_str[i] = parameters_str[i-1]
+
+      print(hour_min)
+      datetimes.append(convert_str_to_dt(datetimes_str[i], hour_min, code))
+    elif code == 0: # Discharge Data
+      datetimes.append(convert_str_to_dt(datetimes_str[i], times_str[i], code))
 
     parameters.append(float(parameters_str[i]))
                                                                   
@@ -123,12 +131,12 @@ def get_mean_data(para_datetimes, para_data, ncfr_dt1, ncfr_dt2):
   para_datetimes = np.array(para_datetimes)
   para_data = np.array(para_data)
     
-   # Look for indices where parameter (streamflow, precip) time is within the ncfr start and end time
+  # Look for indices where parameter (streamflow, precip) time is within the ncfr start and end time
   time_inds = np.where(para_datetimes >= ncfr_dt1 and para_datetimes <= ncfr_dt2)[0][0]
     
   # Find the mean of the two mean data points
   mean_data = stat.mean(para_data[time_inds])
-  print(mean_data) # delete later
+  # print(mean_data) # delete later
 
   return mean_data
 
@@ -193,21 +201,22 @@ def main():
 
   # Load 15 min discharge data
   sepulveda_dts, sepulveda_Qs = load_data(sepulveda_fp, "datetime", "datetime", "discharge_cfs", 0)
-  whitter_dts, whittier_Qs = load_data(whitter_fp, "datetime", "datetime", "discharge_cfs", 0)
-  # Finish here
+  whittier_dts, whittier_Qs = load_data(whittier_fp, "datetime", "datetime", "discharge_cfs", 0)
+  santa_ana_dts, santa_ana_Qs = load_data(santa_ana_fp, "datetime", "datetime", "discharge_cfs", 0)
+  san_diego_dts, san_diego_Qs = load_data(san_diego_fp, "datetime", "datetime", "discharge_cfs", 0)
 
   ## Load the hourly RAWS data
   # Get the file paths
-  cheeseboro_SP_fp = "./data/WRCC_CampElliot_RAWS_Data.csv"
-
-  datetime = dt.datetime(2023, 11, 26, 18, 30)
-  print(datetime) # delete later
+  cheeseboro_SP_fp = "./data/WRCC_Cheeseboro_RAWS_Data.csv"
+  santa_fe_WN_fp = "./data/WRCC_SantaFeDam_RAWS_Data.csv"
+  fremont_SA_fp = "./data/WRCC_FremontCanyon_RAWS_Data.csv"
+  elliot_SD_fp = "./data/WRCC_CampElliot_RAWS_Data.csv"
 
   # Load hourly precipitation data
-  cheeseboro_SP_dts, cheeseboro_SP_prcp = load_data(cheeseboro_SP_fp, "Date", "Time", "Precip_in", 1) # Error, see note
-  print(cheeseboro_SP_dts, cheeseboro_SP_prcp)
-  # See dtype warning... address this or not?
-  # Load for other 3 RAWS sites (left off here... eventually once RAWS data are available)
+  cheeseboro_SP_dts, cheeseboro_SP_prcp = load_data(cheeseboro_SP_fp, "Date", "Time", "Precip_in", 1)
+  santa_fe_WN_dts, santa_fe_prcp = load_data(santa_fe_WN_fp, "Date", "Time", "Precip_in", 1)
+  fremont_SA_dts, fremont_SA_prcp = load_data(fremont_SA_fp, "Date", "Time", "Precip_in", 1)
+  elliot_SD_dts, elliot_SD_prcp = load_data(elliot_SD_fp, "Date", "Time", "Precip_in", 1) 
 
   # Convert precipitation to mm
 
@@ -333,6 +342,5 @@ if __name__ == '__main__':
   main()
 
 # Figure out how the RAWS data is organized and change accordingly
-# Move the load precipitation process to main() into a for loop (load precip by NCFR event only)
-# Address discrepancy between discharge and precipitation datetimes in load_data()
 # Calculate the rain rate
+# Find average of hourly precip and 15-minute discharge data
