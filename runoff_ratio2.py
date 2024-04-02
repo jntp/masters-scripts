@@ -98,7 +98,6 @@ def load_data(file_path, date_str, time_str, parameter_str, code = 0):
 
     # For precipitation data, address formatting issues (H:DD time and 'M' precipitation entries)
     if code == 1: # Precipitation Data
-      print(datetime)
       # Check if datetime string is H:DD format and change to HH:DD
       if len(times_str[i]) == 4: # H:DD
         # Append a zero in front to change format to HH:DD
@@ -117,7 +116,6 @@ def load_data(file_path, date_str, time_str, parameter_str, code = 0):
           # Equate data to the previous entry, which will entail a rain rate of 0 in/hr
           parameters_str[i] = parameters_str[i-1]
 
-      print(hour_min)
       datetimes.append(convert_str_to_dt(datetimes_str[i], hour_min, code))
     elif code == 0: # Discharge Data
       datetimes.append(convert_str_to_dt(datetimes_str[i], times_str[i], code))
@@ -133,16 +131,12 @@ def get_mean_data(para_datetimes, para_data, ncfr_dt1, ncfr_dt2):
     
   # Look for indices where parameter (streamflow, precip) time is within the ncfr start and end time
   time_inds = np.where(para_datetimes >= ncfr_dt1 and para_datetimes <= ncfr_dt2)[0][0]
-    
+
   # Find the mean of the two mean data points
   mean_data = stat.mean(para_data[time_inds])
-  # print(mean_data) # delete later
+  print(mean_data) # delete later
 
   return mean_data
-
-# def get_NCFR_precip(ncfr_dt, ncfr_dt2, RAWS_prcp):
-  # while (
-  
 
 def convert_discharge_runoff(discharge, drainage_area, period = 86400):
   """
@@ -164,9 +158,12 @@ def convert_discharge_runoff(discharge, drainage_area, period = 86400):
 
   return runoff
 
-def get_runoff_ratio(discharge, precip_mm, drainage_area, period = 86400):
+def get_runoff_ratio(discharge, precip_in, drainage_area, period = 86400):
   # Get the runoff by converting discharge from ft^3/s to mm
-  runoff = convert_discharge_runoff(discharge, drainage_area)
+  runoff = convert_discharge_runoff(discharge, drainage_area, period)
+
+  # Convert inches to mm for precip data
+  precip_mm = precip_in * 25.4
 
   # Get the runoff raio by dividing runoff by the precipitation
   runoff_ratio = runoff / precip_mm
@@ -201,9 +198,9 @@ def main():
 
   # Load 15 min discharge data
   sepulveda_dts, sepulveda_Qs = load_data(sepulveda_fp, "datetime", "datetime", "discharge_cfs", 0)
-  whittier_dts, whittier_Qs = load_data(whittier_fp, "datetime", "datetime", "discharge_cfs", 0)
-  santa_ana_dts, santa_ana_Qs = load_data(santa_ana_fp, "datetime", "datetime", "discharge_cfs", 0)
-  san_diego_dts, san_diego_Qs = load_data(san_diego_fp, "datetime", "datetime", "discharge_cfs", 0)
+  # whittier_dts, whittier_Qs = load_data(whittier_fp, "datetime", "datetime", "discharge_cfs", 0)
+  # santa_ana_dts, santa_ana_Qs = load_data(santa_ana_fp, "datetime", "datetime", "discharge_cfs", 0)
+  # san_diego_dts, san_diego_Qs = load_data(san_diego_fp, "datetime", "datetime", "discharge_cfs", 0)
 
   ## Load the hourly RAWS data
   # Get the file paths
@@ -214,9 +211,9 @@ def main():
 
   # Load hourly precipitation data
   cheeseboro_SP_dts, cheeseboro_SP_prcp = load_data(cheeseboro_SP_fp, "Date", "Time", "Precip_in", 1)
-  santa_fe_WN_dts, santa_fe_prcp = load_data(santa_fe_WN_fp, "Date", "Time", "Precip_in", 1)
-  fremont_SA_dts, fremont_SA_prcp = load_data(fremont_SA_fp, "Date", "Time", "Precip_in", 1)
-  elliot_SD_dts, elliot_SD_prcp = load_data(elliot_SD_fp, "Date", "Time", "Precip_in", 1) 
+  # santa_fe_WN_dts, santa_fe_prcp = load_data(santa_fe_WN_fp, "Date", "Time", "Precip_in", 1)
+  # fremont_SA_dts, fremont_SA_prcp = load_data(fremont_SA_fp, "Date", "Time", "Precip_in", 1)
+  # elliot_SD_dts, elliot_SD_prcp = load_data(elliot_SD_fp, "Date", "Time", "Precip_in", 1) 
 
   # Convert precipitation to mm
 
@@ -264,6 +261,10 @@ def main():
       # Change the 2nd NCFR datetime if it goes overnight or if it ends past 9 pm
       if isOvernight(start_hours[i], end_hours[i]) or end_hours[i] >= 21:
         ncfr_dt2 = ncfr_dt + dt.timedelta(days = 1)
+
+      # Left off here
+      print(ncfr_dt, ncfr_dt2)
+      print(ncfr_dt2 - ncfr_dt)
 
       # Retrieve the mean discharge and daily precipitation from the watershed that recorded peak streamflow
       # Calculate runoff ratio immediately after retrieving mean discharge and daily precipitation
@@ -341,6 +342,6 @@ def main():
 if __name__ == '__main__':
   main()
 
-# Figure out how the RAWS data is organized and change accordingly
+# WTF... left off on date formatting... you need to find the length of each NCFR event in hours,
 # Calculate the rain rate
 # Find average of hourly precip and 15-minute discharge data
