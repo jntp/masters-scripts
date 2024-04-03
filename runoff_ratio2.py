@@ -170,7 +170,13 @@ def get_runoff_ratio(discharge, precip_in, drainage_area, period = 86400):
 
   return runoff, runoff_ratio
 
-def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, drainage_area):
+# Add hour lag time for each watershed to this function (example: hr_lag = 6 for SD)
+def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, drainage_area, hr_lag = 0):
+  # Add hours to the NCFR endtime based on the average streamflow response time for each watershed
+  ncfr_dt2 = ncfr_dt2 + dt.timedelta(hours = hr_lag) 
+  print("New endtime: ", ncfr_dt2)
+  # Convert to period to pass on to next functions (left off here)
+
   # Get mean_discharge, mean_precip, runoff, and runoff_ratio for stream and gauge
   try:
     mean_discharge = get_mean_data(stream_dts, stream_Qs, ncfr_dt, ncfr_dt2)
@@ -258,13 +264,12 @@ def main():
       ncfr_dt = dt.datetime(int(years[i]), int(months[i]), int(days[i]), int(start_hours[i]))
       ncfr_dt2 = dt.datetime(int(years[i]), int(months[i]), int(days[i]), int(end_hours[i]))
 
-      # Change the 2nd NCFR datetime if it goes overnight or if it ends past 9 pm
-      if isOvernight(start_hours[i], end_hours[i]) or end_hours[i] >= 21:
+      # Change the 2nd NCFR datetime if it goes overnight
+      if isOvernight(start_hours[i], end_hours[i]):
         ncfr_dt2 = ncfr_dt + dt.timedelta(days = 1)
 
       # Left off here
       print(ncfr_dt, ncfr_dt2)
-      print(ncfr_dt2 - ncfr_dt)
 
       # Retrieve the mean discharge and daily precipitation from the watershed that recorded peak streamflow
       # Calculate runoff ratio immediately after retrieving mean discharge and daily precipitation
@@ -343,5 +348,7 @@ if __name__ == '__main__':
   main()
 
 # WTF... left off on date formatting... you need to find the length of each NCFR event in hours,
+# Left off at... See note above get_stats() 
 # Calculate the rain rate
 # Find average of hourly precip and 15-minute discharge data
+# Avg streamflow response to NCFR passage: +2 for SP and WN, +3 for SA, and +6 for SD hours
