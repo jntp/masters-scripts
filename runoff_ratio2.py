@@ -175,7 +175,12 @@ def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, 
   # Add hours to the NCFR endtime based on the average streamflow response time for each watershed
   ncfr_dt2 = ncfr_dt2 + dt.timedelta(hours = hr_lag) 
   print("New endtime: ", ncfr_dt2)
-  # Convert to period to pass on to next functions (left off here)
+
+  # Get the duration of the NCFR event
+  ncfr_duration = ncfr_dt2 - ncfr_dt
+  print("Datetime (hrs, secs): ", ncfr_duration, ncfr_duration.total_seconds())
+  # Pass the seconds attribute as period to next several functions (left off here)
+
 
   # Get mean_discharge, mean_precip, runoff, and runoff_ratio for stream and gauge
   try:
@@ -275,7 +280,7 @@ def main():
       # Calculate runoff ratio immediately after retrieving mean discharge and daily precipitation
       # Use try/except blocks to incorporate "Plan B" if "Plan A" does not have measurements
       mean_Q_SP, mean_prcp_SP, runoff_SP, run_ratio_SP = get_stats(sepulveda_dts, sepulveda_Qs, cheeseboro_SP_dts, \
-          cheeseboro_SP_prcp, ncfr_dt, ncfr_dt2, drainage_areas[0])
+          cheeseboro_SP_prcp, ncfr_dt, ncfr_dt2, drainage_areas[0], 2)
       mean_Q_WN, mean_prcp_WN, runoff_WN, run_ratio_WN = get_stats(whittier_dts, whittier_Qs, santa_fe_WN_dts, \
           santa_fe_WN_prcp, ncfr_dt, ncfr_dt2, drainage_areas[1])
       mean_Q_SA, mean_prcp_SA, runoff_SA, run_ratio_SA = get_stats(santa_ana_dts, santa_ana_Qs, fremont_SA_dts, \
