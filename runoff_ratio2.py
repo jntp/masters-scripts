@@ -179,14 +179,15 @@ def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, 
   # Get the duration of the NCFR event
   ncfr_duration = ncfr_dt2 - ncfr_dt
   print("Datetime (hrs, secs): ", ncfr_duration, ncfr_duration.total_seconds())
-  # Pass the seconds attribute as period to next several functions (left off here)
+  
+  # Check how mean data is calculated (left off here)
 
 
   # Get mean_discharge, mean_precip, runoff, and runoff_ratio for stream and gauge
   try:
     mean_discharge = get_mean_data(stream_dts, stream_Qs, ncfr_dt, ncfr_dt2)
     mean_precip = get_mean_data(gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2)
-    runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_area) 
+    runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_area, ncfr_duration.total_seconds()) 
   except:
     mean_discharge = np.nan
     mean_precip = np.nan
@@ -196,6 +197,8 @@ def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, 
   # Check if the runoff_ratio equals infinity; set to NaN
   if runoff_ratio == float('inf'):
     runoff_ratio = np.nan
+
+  print("Runoff Ratio: ", runoff_ratio)
 
   return mean_discharge, mean_precip, runoff, runoff_ratio
 
@@ -209,9 +212,9 @@ def main():
 
   # Load 15 min discharge data
   sepulveda_dts, sepulveda_Qs = load_data(sepulveda_fp, "datetime", "datetime", "discharge_cfs", 0)
-  # whittier_dts, whittier_Qs = load_data(whittier_fp, "datetime", "datetime", "discharge_cfs", 0)
-  # santa_ana_dts, santa_ana_Qs = load_data(santa_ana_fp, "datetime", "datetime", "discharge_cfs", 0)
-  # san_diego_dts, san_diego_Qs = load_data(san_diego_fp, "datetime", "datetime", "discharge_cfs", 0)
+  whittier_dts, whittier_Qs = load_data(whittier_fp, "datetime", "datetime", "discharge_cfs", 0)
+  santa_ana_dts, santa_ana_Qs = load_data(santa_ana_fp, "datetime", "datetime", "discharge_cfs", 0)
+  san_diego_dts, san_diego_Qs = load_data(san_diego_fp, "datetime", "datetime", "discharge_cfs", 0)
 
   ## Load the hourly RAWS data
   # Get the file paths
@@ -222,9 +225,9 @@ def main():
 
   # Load hourly precipitation data
   cheeseboro_SP_dts, cheeseboro_SP_prcp = load_data(cheeseboro_SP_fp, "Date", "Time", "Precip_in", 1)
-  # santa_fe_WN_dts, santa_fe_prcp = load_data(santa_fe_WN_fp, "Date", "Time", "Precip_in", 1)
-  # fremont_SA_dts, fremont_SA_prcp = load_data(fremont_SA_fp, "Date", "Time", "Precip_in", 1)
-  # elliot_SD_dts, elliot_SD_prcp = load_data(elliot_SD_fp, "Date", "Time", "Precip_in", 1) 
+  santa_fe_WN_dts, santa_fe_WN_prcp = load_data(santa_fe_WN_fp, "Date", "Time", "Precip_in", 1)
+  fremont_SA_dts, fremont_SA_prcp = load_data(fremont_SA_fp, "Date", "Time", "Precip_in", 1)
+  elliot_SD_dts, elliot_SD_prcp = load_data(elliot_SD_fp, "Date", "Time", "Precip_in", 1) 
 
   # Convert precipitation to mm
 
@@ -282,11 +285,11 @@ def main():
       mean_Q_SP, mean_prcp_SP, runoff_SP, run_ratio_SP = get_stats(sepulveda_dts, sepulveda_Qs, cheeseboro_SP_dts, \
           cheeseboro_SP_prcp, ncfr_dt, ncfr_dt2, drainage_areas[0], 2)
       mean_Q_WN, mean_prcp_WN, runoff_WN, run_ratio_WN = get_stats(whittier_dts, whittier_Qs, santa_fe_WN_dts, \
-          santa_fe_WN_prcp, ncfr_dt, ncfr_dt2, drainage_areas[1])
+          santa_fe_WN_prcp, ncfr_dt, ncfr_dt2, drainage_areas[1], 2)
       mean_Q_SA, mean_prcp_SA, runoff_SA, run_ratio_SA = get_stats(santa_ana_dts, santa_ana_Qs, fremont_SA_dts, \
-          fremont_SA_prcp, ncfr_dt, ncfr_dt2, drainage_areas[2])
+          fremont_SA_prcp, ncfr_dt, ncfr_dt2, drainage_areas[2], 3)
       mean_Q_SD, mean_prcp_SD, runoff_SD, run_ratio_SD = get_stats(san_diego_dts, san_diego_Qs, elliot_SD_dts, \
-          elliot_SD_prcp, ncfr_dt, ncfr_dt2, drainage_areas[3])
+          elliot_SD_prcp, ncfr_dt, ncfr_dt2, drainage_areas[3], 6)
 
       # Calculate the average precipitation and discharge during NCFR event (INSERT into function above)
 
@@ -347,13 +350,12 @@ def main():
   ncfr_entries['runoff_ratio_SD'] = run_ratios_SD
 
   # Export the updated dataframe to csv file
-  ncfr_entries.to_csv(ncfr_fp) 
+  # ncfr_entries.to_csv(ncfr_fp) 
 
 if __name__ == '__main__':
   main()
 
-# WTF... left off on date formatting... you need to find the length of each NCFR event in hours,
-# Left off at... See note above get_stats() 
+# Why are all the runoff ratios nan? (Left off here)
 # Calculate the rain rate
 # Find average of hourly precip and 15-minute discharge data
 # Avg streamflow response to NCFR passage: +2 for SP and WN, +3 for SA, and +6 for SD hours
