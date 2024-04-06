@@ -114,7 +114,7 @@ def load_data(file_path, date_str, time_str, parameter_str, code = 0):
           continue
         else:
           # Equate data to the previous entry, which will entail a rain rate of 0 in/hr
-          parameters_str[i] = parameters_str[i-1]
+          parameters_str[i] = parameters_str[i - 1]
 
       datetimes.append(convert_str_to_dt(datetimes_str[i], hour_min, code))
     elif code == 0: # Discharge Data
@@ -124,17 +124,45 @@ def load_data(file_path, date_str, time_str, parameter_str, code = 0):
                                                                   
   return datetimes, parameters
 
-def get_mean_data(para_datetimes, para_data, ncfr_dt1, ncfr_dt2):
+def get_mean_data(para_datetimes, para_data, ncfr_dt1, ncfr_dt2, hr_lag = 2, code = 0):
   # Convert parameter datetimes and data to numpy array for array operations                      
   para_datetimes = np.array(para_datetimes)
   para_data = np.array(para_data)
     
-  # Look for indices where parameter (streamflow, precip) time is within the ncfr start and end time
-  time_inds = np.where(para_datetimes >= ncfr_dt1 and para_datetimes <= ncfr_dt2)[0][0]
+  ## Calculate rain rate from precipitation data (do so only for the event)
+  if code == 1: # Precipitation data
+    # NCFR start and end times should strictly be confined to the event
+    # Do not change NCFR start and end time
 
-  # Find the mean of the two mean data points
-  mean_data = stat.mean(para_data[time_inds])
-  print(mean_data) # delete later
+    # Look for indices where parameter (streamflow, precip) time is within the ncfr start and end time
+    time_inds = np.logical_and(para_datetimes >= ncfr_dt1, para_datetimes <= ncfr_dt2)
+
+    ncfr_precip = para_data[time_inds]
+    rain_rates = [] 
+
+    for i, hour_precip in enumerate(ncfr_precip):
+      if i == 0: 
+        # Skip to the next iteration
+        continue
+      else:
+        rain_rate = ncfr_precip[i] - ncfr_precip[i - 1]
+        rain_rates.append(rain_rate)
+
+    print("Rain rates: ", rain_rates)
+    mean_data = stat.mean(rain_rates)
+  elif code == 0: # Discharge data
+    # NCFR start and end times should be offset by the hr_lag
+    # Add the hr_lag to both NCFR start and end time to reflect streamflow response
+    ncfr_dt1 = ncfr_dt1 + dt.timedelta(hours = hr_lag)
+    ncfr_dt2 = ncfr_dt2 + dt.timedelta(hours = hr_lag)
+
+    # Look for indices where parameter (streamflow, precip) time is within the ncfr start and end time
+    time_inds = np.logical_and(para_datetimes >= ncfr_dt1, para_datetimes <= ncfr_dt2)
+
+    # Find the mean of the two mean data points
+    mean_data = stat.mean(para_data[time_inds])
+
+  print("Mean of Parameter: ", mean_data)
 
   return mean_data
 
@@ -171,24 +199,25 @@ def get_runoff_ratio(discharge, precip_in, drainage_area, period = 86400):
   return runoff, runoff_ratio
 
 # Add hour lag time for each watershed to this function (example: hr_lag = 6 for SD)
-def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, drainage_area, hr_lag = 0):
+def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, drainage_area, hr_lag = 2):
   # Add hours to the NCFR endtime based on the average streamflow response time for each watershed
-  ncfr_dt2 = ncfr_dt2 + dt.timedelta(hours = hr_lag) 
-  print("New endtime: ", ncfr_dt2)
+  # ncfr_dt2 = ncfr_dt2 + dt.timedelta(hours = hr_lag) 
+  # print("New endtime: ", ncfr_dt2)
 
   # Get the duration of the NCFR event
   ncfr_duration = ncfr_dt2 - ncfr_dt
   print("Datetime (hrs, secs): ", ncfr_duration, ncfr_duration.total_seconds())
-  
-  # Check how mean data is calculated (left off here)
 
+  # Left off on calculating rain rate (precip is cumulative currently)
 
   # Get mean_discharge, mean_precip, runoff, and runoff_ratio for stream and gauge
   try:
-    mean_discharge = get_mean_data(stream_dts, stream_Qs, ncfr_dt, ncfr_dt2)
-    mean_precip = get_mean_data(gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2)
+    print("Hi") 
+    mean_discharge = get_mean_data(stream_dts, stream_Qs, ncfr_dt, ncfr_dt2, 0)
+    mean_precip = get_mean_data(gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, 1)
     runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_area, ncfr_duration.total_seconds()) 
   except:
+    print("Error?") 
     mean_discharge = np.nan
     mean_precip = np.nan
     runoff = np.nan
@@ -355,7 +384,5 @@ def main():
 if __name__ == '__main__':
   main()
 
-# Why are all the runoff ratios nan? (Left off here)
-# Calculate the rain rate
-# Find average of hourly precip and 15-minute discharge data
+# Left off annotating get_mean() code and testing if it works; clean code after!
 # Avg streamflow response to NCFR passage: +2 for SP and WN, +3 for SA, and +6 for SD hours
