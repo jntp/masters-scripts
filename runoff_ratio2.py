@@ -129,7 +129,7 @@ def get_mean_data(para_datetimes, para_data, ncfr_dt1, ncfr_dt2, hr_lag = 2, cod
   para_datetimes = np.array(para_datetimes)
   para_data = np.array(para_data)
     
-  ## Calculate rain rate from precipitation data (do so only for the event)
+  ## Calculate event precipitation from precipitation data
   if code == 1: # Precipitation data
     # NCFR start and end times should strictly be confined to the event
     # Do not change NCFR start and end time
@@ -137,27 +137,27 @@ def get_mean_data(para_datetimes, para_data, ncfr_dt1, ncfr_dt2, hr_lag = 2, cod
     # Look for indices where parameter (streamflow, precip) time is within the ncfr start and end time
     time_inds = np.logical_and(para_datetimes >= ncfr_dt1, para_datetimes <= ncfr_dt2)
 
-    # Get datetimes for ncfr events and create empty rain rates array (which will be used to calculate the mean)
+    # Get datetimes for ncfr events and initialize the total event precip variable
     ncfr_precip = para_data[time_inds]
-    rain_rates = [] 
+    event_rain = 0 # start at zero inches of rain
 
-    # Calculate the rain rate for each hour
+    # Calculate the total precipitation for the NCFR event
     for i, hour_precip in enumerate(ncfr_precip):
-      if i == 0: # First entry (cannot calculate difference)
+      if i == 0: # First entry (entry may be greater than zero); cannot calculate
         # Skip to the next iteration
         continue
       else: # all other entries
-        # Calculate the rain rate via the difference; append to rain rates array 
-        rain_rate = ncfr_precip[i] - ncfr_precip[i - 1]
-        rain_rates.append(rain_rate)
+        # Calculate the rain received over the hour via the difference 
+        hour_rate = ncfr_precip[i] - ncfr_precip[i - 1]
+        event_rain += hour_rate # add to the event total
 
-    print("Rain rates: ", rain_rates)
+    print("Event rain: ", event_rain)
 
-    # Find the mean of the rain rates data 
-    mean_data = stat.mean(rain_rates)
+    # Simply assign as the "mean_data" which the function inherently returns 
+    mean_data = event_rain
   elif code == 0: # Discharge data
     # NCFR start and end times should be offset by the hr_lag
-    # Add the hr_lag to both NCFR start and end time to reflect streamflow response
+    # Add the hr_lag to NCFR start and end time to reflect streamflow response
     ncfr_dt1 = ncfr_dt1 + dt.timedelta(hours = hr_lag)
     ncfr_dt2 = ncfr_dt2 + dt.timedelta(hours = hr_lag)
 
@@ -167,7 +167,7 @@ def get_mean_data(para_datetimes, para_data, ncfr_dt1, ncfr_dt2, hr_lag = 2, cod
     # Find the mean of the discharge data
     mean_data = stat.mean(para_data[time_inds])
 
-  print("Mean of Parameter: ", mean_data)
+    print("Discharge mean: ", mean_data)
 
   return mean_data
 
@@ -203,26 +203,17 @@ def get_runoff_ratio(discharge, precip_in, drainage_area, period = 86400):
 
   return runoff, runoff_ratio
 
-# Add hour lag time for each watershed to this function (example: hr_lag = 6 for SD)
 def get_stats(stream_dts, stream_Qs, gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, drainage_area, hr_lag = 2):
-  # Add hours to the NCFR endtime based on the average streamflow response time for each watershed
-  # ncfr_dt2 = ncfr_dt2 + dt.timedelta(hours = hr_lag) 
-  # print("New endtime: ", ncfr_dt2)
-
   # Get the duration of the NCFR event
   ncfr_duration = ncfr_dt2 - ncfr_dt
   print("Datetime (hrs, secs): ", ncfr_duration, ncfr_duration.total_seconds())
 
-  # Left off on calculating rain rate (precip is cumulative currently)
-
   # Get mean_discharge, mean_precip, runoff, and runoff_ratio for stream and gauge
   try:
-    print("Hi") 
     mean_discharge = get_mean_data(stream_dts, stream_Qs, ncfr_dt, ncfr_dt2, hr_lag, 0)
     mean_precip = get_mean_data(gauge_dts, gauge_prcps, ncfr_dt, ncfr_dt2, hr_lag, 1)
     runoff, runoff_ratio = get_runoff_ratio(mean_discharge, mean_precip, drainage_area, ncfr_duration.total_seconds()) 
-  except:
-    print("Error?") 
+  except: 
     mean_discharge = np.nan
     mean_precip = np.nan
     runoff = np.nan
@@ -263,8 +254,6 @@ def main():
   fremont_SA_dts, fremont_SA_prcp = load_data(fremont_SA_fp, "Date", "Time", "Precip_in", 1)
   elliot_SD_dts, elliot_SD_prcp = load_data(elliot_SD_fp, "Date", "Time", "Precip_in", 1) 
 
-  # Convert precipitation to mm
-
   ## Load data from NCFR_Stats2
   ncfr_fp = "./data/NCFR_Stats2.csv"
   ncfr_entries = pd.read_csv(ncfr_fp)
@@ -276,7 +265,6 @@ def main():
   max_refs = ncfr_entries.loc[:, "Max_Ref"]
   peak_watersheds = ncfr_entries.loc[:, "peak_watershed"]
   watersheds_crossed = ncfr_entries.loc[:, "watersheds_crossed"]
-  print(watersheds_crossed[3], type(watersheds_crossed[3]))
 
   ## Format the NCFR_Stats2 data and check for mean discharge and daily precipitation
   # Create list of drainage areas of watersheds [Sepulveda, Whittier, Santa Ana, San Diego]
@@ -302,8 +290,8 @@ def main():
 
   # Iterate through every NCFR entry
   for i, year in enumerate(years):
-    # Check for mean discharge and daily precip, only if watersheds_crossed has an entry (which is a string, not float)
-    if type(watersheds_crossed[i]) is str:
+    # Check for discharge and precip, only if max_ref has been recorded
+    if not math.isnan(max_refs[i]):
       # Create two NCFR datetime objects of the same day initially 
       ncfr_dt = dt.datetime(int(years[i]), int(months[i]), int(days[i]), int(start_hours[i]))
       ncfr_dt2 = dt.datetime(int(years[i]), int(months[i]), int(days[i]), int(end_hours[i]))
@@ -312,27 +300,22 @@ def main():
       if isOvernight(start_hours[i], end_hours[i]):
         ncfr_dt2 = ncfr_dt + dt.timedelta(days = 1)
 
-      print(ncfr_dt, ncfr_dt2)
+      print("\n", ncfr_dt, ncfr_dt2)
 
-      # Left off here
-      # Calculate runoff ratio only when watersheds_crossed has an entry 
-      # Revise annotations
-
-
-      # Retrieve the mean discharge and daily precipitation from the watershed that recorded peak streamflow
-      # Calculate runoff ratio immediately after retrieving mean discharge and daily precipitation
-      # Use try/except blocks to incorporate "Plan B" if "Plan A" does not have measurements
+      # Retrieve the 15-minute discharge and hourly precipitation data from all four watersheds
+      # Calculate runoff ratio immediately after retrieving discharge and precipitation data
+      print("Sepulveda")
       mean_Q_SP, mean_prcp_SP, runoff_SP, run_ratio_SP = get_stats(sepulveda_dts, sepulveda_Qs, cheeseboro_SP_dts, \
           cheeseboro_SP_prcp, ncfr_dt, ncfr_dt2, drainage_areas[0], 2)
+      print("Whittier Narrows")
       mean_Q_WN, mean_prcp_WN, runoff_WN, run_ratio_WN = get_stats(whittier_dts, whittier_Qs, santa_fe_WN_dts, \
           santa_fe_WN_prcp, ncfr_dt, ncfr_dt2, drainage_areas[1], 2)
+      print("Santa Ana")
       mean_Q_SA, mean_prcp_SA, runoff_SA, run_ratio_SA = get_stats(santa_ana_dts, santa_ana_Qs, fremont_SA_dts, \
           fremont_SA_prcp, ncfr_dt, ncfr_dt2, drainage_areas[2], 3)
+      print("San Diego")
       mean_Q_SD, mean_prcp_SD, runoff_SD, run_ratio_SD = get_stats(san_diego_dts, san_diego_Qs, elliot_SD_dts, \
           elliot_SD_prcp, ncfr_dt, ncfr_dt2, drainage_areas[3], 6)
-
-      # Calculate the average precipitation and discharge during NCFR event (INSERT into function above)
-
     else: # For entries with no watershed crossing
       # Set all parameters to "NaN"
       mean_Q_SP = np.nan
@@ -390,10 +373,9 @@ def main():
   ncfr_entries['runoff_ratio_SD'] = run_ratios_SD
 
   # Export the updated dataframe to csv file
-  # ncfr_entries.to_csv(ncfr_fp) 
+  ncfr_entries.to_csv(ncfr_fp) 
 
 if __name__ == '__main__':
   main()
 
-# See note in main(); clean code after!
 # Avg streamflow response to NCFR passage: +2 for SP and WN, +3 for SA, and +6 for SD hours
