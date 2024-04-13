@@ -96,7 +96,7 @@ def round_for_text(m, b, r_squared):
 def main():
   ## Load the hydrometeorological data
   # Get the file path
-  fp = "./data/NCFR_Stats.csv"
+  fp = "./data/NCFR_Stats2.csv"
 
   # Load the data
   entries = pd.read_csv(fp)
@@ -208,7 +208,7 @@ def main():
   ax.set_xticks(maxref_ticks)
 
   # Save Plot
-  plt.savefig('./plots/reflectivity_streamflow_SP.png')
+  plt.savefig('./plots/reflectivity_streamflow_SP2.png')
 
   # Clear axes
   ax.clear()
@@ -239,7 +239,7 @@ def main():
   ax.set_xticks(maxref_ticks)  
 
   # Save Plot
-  plt.savefig('./plots/reflectivity_streamflow_WN.png')
+  plt.savefig('./plots/reflectivity_streamflow_WN2.png')
 
   # Clear axes
   ax.clear()
@@ -270,7 +270,7 @@ def main():
   ax.set_xticks(maxref_ticks) 
 
   # Save Plot
-  plt.savefig('./plots/reflectivity_streamflow_SA.png')
+  plt.savefig('./plots/reflectivity_streamflow_SA2.png')
 
   # Clear axes
   ax.clear()
@@ -301,7 +301,7 @@ def main():
   ax.set_xticks(maxref_ticks) 
 
   # Save Plot
-  plt.savefig('./plots/reflectivity_streamflow_SD.png')
+  plt.savefig('./plots/reflectivity_streamflow_SD2.png')
 
   # Clear axes
   ax.clear()
@@ -345,7 +345,7 @@ def main():
   ax.set_xticks(maxref_ticks)
 
   # Save Plot
-  plt.savefig('./plots/reflectivity_runoffratio_SP.png')
+  plt.savefig('./plots/reflectivity_runoffratio_SP2.png')
   
   # Clear axes
   ax.clear()
@@ -376,7 +376,7 @@ def main():
   ax.set_xticks(maxref_ticks)
 
   # Save Plot
-  plt.savefig('./plots/reflectivity_runoffratio_WN.png')
+  plt.savefig('./plots/reflectivity_runoffratio_WN2.png')
   
   # Clear axes
   ax.clear()
@@ -407,7 +407,7 @@ def main():
   ax.set_xticks(maxref_ticks)
 
   # Save Plot
-  plt.savefig('./plots/reflectivity_runoffratio_SA.png')
+  plt.savefig('./plots/reflectivity_runoffratio_SA2.png')
   
   # Clear axes
   ax.clear()
@@ -438,7 +438,7 @@ def main():
   ax.set_xticks(maxref_ticks)
 
   # Save Plot
-  plt.savefig('./plots/reflectivity_runoffratio_SD.png')
+  plt.savefig('./plots/reflectivity_runoffratio_SD2.png')
   
   # Clear axes
   ax.clear()
@@ -463,9 +463,9 @@ def main():
 
   # Round variables for better text display
   m9_round, b9_round, r_squared9_round = round_for_text(m9, b9, r_squared9)
-
+    
   # Add text showing linear equation and R-squared value
-  ax.text(54, 52, r"$q = {0}*p {1}$" "\n" r"$R^{2} = {3}$".format(m9_round, b9_round, 2, \
+  ax.text(1.3, 26.5, r"$q = {0}*p + {1}$" "\n" r"$R^{2} = {3}$".format(m9_round, b9_round, 2, \
     r_squared9_round)) 
 
   # Add axis labels and title
@@ -474,7 +474,7 @@ def main():
   ax.set_title("Sepulveda Dam", horizontalalignment = "right")
 
   # Save Plot
-  plt.savefig('./plots/rainfall_runoff_SP')
+  plt.savefig('./plots/rainfall_runoff_SP2')
 
   # Clear axes
   ax.clear()
@@ -492,7 +492,7 @@ def main():
   m10_round, b10_round, r_squared10_round = round_for_text(m10, b10, r_squared10)
 
   # Add text showing linear equation and R-squared value
-  ax.text(54, 33, r"$q = {0}*p {1}$" "\n" r"$R^{2} = {3}$".format(m10_round, b10_round, 2, \
+  ax.text(1.05, 13.5, r"$q = {0}*p + {1}$" "\n" r"$R^{2} = {3}$".format(m10_round, b10_round, 2, \
     r_squared10_round)) 
 
   # Add axis labels and title
@@ -501,7 +501,7 @@ def main():
   ax.set_title("Whittier Narrows Dam", horizontalalignment = "right")
 
   # Save Plot
-  plt.savefig('./plots/rainfall_runoff_WN')
+  plt.savefig('./plots/rainfall_runoff_WN2')
 
   # Clear axes
   ax.clear()
@@ -519,7 +519,7 @@ def main():
   m11_round, b11_round, r_squared11_round = round_for_text(m11, b11, r_squared11)
 
   # Add text showing linear equation and R-squared value
-  ax.text(26, 2.6, r"$q = {0}*p + {1}$" "\n" r"$R^{2} = {3}$".format(m11_round, b11_round, 2, \
+  ax.text(1.1, 1.92, r"$q = {0}*p + {1}$" "\n" r"$R^{2} = {3}$".format(m11_round, b11_round, 2, \
     r_squared11_round)) 
 
   # Add axis labels and title
@@ -528,7 +528,7 @@ def main():
   ax.set_title("Santa Ana River", horizontalalignment = "right")
 
   # Save Plot
-  plt.savefig('./plots/rainfall_runoff_SA')
+  plt.savefig('./plots/rainfall_runoff_SA2')
 
   # Clear axes
   ax.clear()
@@ -555,8 +555,11 @@ def main():
   ax.set_title("San Diego River", horizontalalignment = "right")
 
   # Save Plot
-  plt.savefig('./plots/rainfall_runoff_SD')
+  plt.savefig('./plots/rainfall_runoff_SD2')
 
 
 if __name__ == '__main__':
   main()
+
+# Left off formatting rainfall_runoff for SD
+# Still have max reflectivity vs runoff ratio for all watersheds
