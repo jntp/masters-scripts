@@ -146,7 +146,7 @@ def find_collinearity(X):
 def main():
   ### Multiple Regression Stats (Four Variables)
   ## Load the hydrometerological data
-  hydro_fp = "./data/NCFR_Stats.csv"
+  hydro_fp = "./data/NCFR_Stats2.csv"
   met_fp = "./data/NCFR_Propagation_Stats_MR.csv"
 
   # Load the hydrological data

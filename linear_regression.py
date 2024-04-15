@@ -332,7 +332,7 @@ def main():
   m5_round, b5_round, r_squared5_round = round_for_text(m5, b5, r_squared5)
 
   # Add text showing linear equation and R-squared value
-  ax.text(62, 4.65, r"$r = {0}*Z {1}$" "\n" r"$R^{2} = {3}$".format(m5_round, b5_round, 2, \
+  ax.text(61.5, 17, r"$r = {0}*Z {1}$" "\n" r"$R^{2} = {3}$".format(m5_round, b5_round, 2, \
     r_squared5_round)) 
 
   # Add axis labels and title
@@ -363,7 +363,7 @@ def main():
   m6_round, b6_round, r_squared6_round = round_for_text(m6, b6, r_squared6)
 
   # Add text showing linear equation and R-squared value
-  ax.text(62, 3.08, r"$r = {0}*Z + {1}$" "\n" r"$R^{2} = {3}$".format(m6_round, b6_round, 2, \
+  ax.text(62, 4.25, r"$r = {0}*Z {1}$" "\n" r"$R^{2} = {3}$".format(m6_round, b6_round, 2, \
     r_squared6_round)) 
 
   # Add axis labels and title
@@ -394,7 +394,7 @@ def main():
   m7_round, b7_round, r_squared7_round = round_for_text(m7, b7, r_squared7)
 
   # Add text showing linear equation and R-squared value
-  ax.text(62, 1.08, r"$r = {0}*Z + {1}$" "\n" r"$R^{2} = {3}$".format(m7_round, b7_round, 2, \
+  ax.text(62, 0.91, r"$r = {0}*Z + {1}$" "\n" r"$R^{2} = {3}$".format(m7_round, b7_round, 2, \
     r_squared7_round)) 
 
   # Add axis labels and title
@@ -425,7 +425,7 @@ def main():
   m8_round, b8_round, r_squared8_round = round_for_text(m8, b8, r_squared8)
 
   # Add text showing linear equation and R-squared value
-  ax.text(62, 1.65, r"$r = {0}*Z + {1}$" "\n" r"$R^{2} = {3}$".format(m8_round, b8_round, 2, \
+  ax.text(62, 0.315, r"$r = {0}*Z + {1}$" "\n" r"$R^{2} = {3}$".format(m8_round, b8_round, 2, \
     r_squared8_round)) 
 
   # Add axis labels and title
@@ -546,7 +546,7 @@ def main():
   m12_round, b12_round, r_squared12_round = round_for_text(m12, b12, r_squared12)
 
   # Add text showing linear equation and R-squared value
-  ax.text(31, 3.15, r"$q = {0}*p + {1}$" "\n" r"$R^{2} = {3}$".format(m12_round, b12_round, 2, \
+  ax.text(0.75, 5.1, r"$q = {0}*p {1}$" "\n" r"$R^{2} = {3}$".format(m12_round, b12_round, 2, \
     r_squared12_round)) 
 
   # Add axis labels and title
@@ -560,6 +560,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
-# Left off formatting rainfall_runoff for SD
-# Still have max reflectivity vs runoff ratio for all watersheds

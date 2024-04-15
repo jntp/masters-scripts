@@ -126,7 +126,7 @@ def create_3D_mesh(X1, a):
 def main():
   ### Multiple Regression Stats (Four Variables)
   ## Load the hydrometerological data
-  hydro_fp = "./data/NCFR_Stats.csv"
+  hydro_fp = "./data/NCFR_Stats2.csv"
   met_fp = "./data/NCFR_Propagation_Stats_MR.csv"
 
   # Load the hydrological data
@@ -272,7 +272,7 @@ def main():
   ax.view_init(elev = 14, azim = -49)
 
   # Save Plot
-  plt.savefig('./plots/3D_streamflow_SP')
+  plt.savefig('./plots/3D_streamflow_SP2')
 
   ## Whittier Narrows Dam
   fig = plt.figure(2)
@@ -299,7 +299,7 @@ def main():
   ax.view_init(elev = 14, azim = -49)
 
   # Save Plot
-  plt.savefig('./plots/3D_streamflow_WN')
+  plt.savefig('./plots/3D_streamflow_WN2')
 
   ## Santa Ana River
   fig = plt.figure(3)
@@ -326,7 +326,7 @@ def main():
   ax.view_init(elev = 14, azim = -49)
 
   # Save Plot
-  plt.savefig('./plots/3D_streamflow_SA')
+  plt.savefig('./plots/3D_streamflow_SA2')
 
   ## San Diego River
   fig = plt.figure(4)
@@ -353,7 +353,7 @@ def main():
   ax.view_init(elev = 14, azim = -49)
 
   # Save Plot
-  plt.savefig('./plots/3D_streamflow_SD')
+  plt.savefig('./plots/3D_streamflow_SD2')
 
   ## Storm Speed and Direction vs. Runoff Ratio
   X51, y5, predictedY51, r_squared51, a51 = run_LA_regression(azimuth_SP_prop2, speed_SP_prop2, run_ratios_SP_prop)
@@ -384,14 +384,14 @@ def main():
   ax.set_title("Sepulveda Dam")
 
   # Add R-squared value and equation to plot
-  ax.text(-145, 5, 5, r"$Q = {0} + {1}*a {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a51[2], a51[0], \
+  ax.text(-103, 10, 17.5, r"$Q = {0} {1}*a + {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a51[2], a51[0], \
       a51[1], 2, r_squared51))
  
   # Set the default viewing position for 3D plot
   ax.view_init(elev = 14, azim = -49)
 
   # Save Plot
-  plt.savefig('./plots/3D_runoff_ratio_SP')
+  plt.savefig('./plots/3D_runoff_ratio_SP2')
 
   ## Whittier Narrows Dam 
   # Create fig and axes
@@ -403,6 +403,9 @@ def main():
   ax.scatter(X61[:, 0], X61[:, 1], predictedY61, color = "g", label = "Predicted Runoff Ratio")
   ax.plot_trisurf(combinedArrays6[:, 0], combinedArrays6[:, 1], Z6, alpha = 0.5)
   
+  # Adjust tick mark spacing for x axis
+  ax.set_yticks(np.arange(0, 20, 5))
+
   # Add labels, legend, and title
   ax.set_xlabel("Direction "r"$[^\circ]$")
   ax.set_ylabel("Speed [m/s]")
@@ -412,14 +415,14 @@ def main():
   ax.set_title("Whittier Narrows Dam")
 
   # Add R-squared value and equation to plot
-  ax.text(-125, 7, 3.25, r"$Q = {0} + {1}*a {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a61[2], a61[0], \
+  ax.text(-45, 0, 0.52, r"$Q = {0} {1}*a + {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a61[2], a61[0], \
       a61[1], 2, r_squared61))
  
   # Set the default viewing position for 3D plot
   ax.view_init(elev = 14, azim = -49)
 
   # Save Plot
-  plt.savefig('./plots/3D_runoff_ratio_WN')
+  plt.savefig('./plots/3D_runoff_ratio_WN2')
 
   ## Santa Ana River
   # Create fig and axes
@@ -440,14 +443,14 @@ def main():
   ax.set_title("Santa Ana River")
 
   # Add R-squared value and equation to plot
-  ax.text(-125, 7, 0.075, r"$Q = {0} + {1}*a + {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a71[2], a71[0], \
+  ax.text(2, 0, 0.115, r"$Q = {0} + {1}*a + {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a71[2], a71[0], \
       a71[1], 2, r_squared71))
  
   # Set the default viewing position for 3D plot
   ax.view_init(elev = 14, azim = -49)
 
   # Save Plot
-  plt.savefig('./plots/3D_runoff_ratio_SA')
+  plt.savefig('./plots/3D_runoff_ratio_SA2')
 
   ## San Diego River
   # Create fig and axes
@@ -468,14 +471,14 @@ def main():
   ax.set_title("San Diego River")
 
   # Add R-squared value and equation to plot
-  ax.text(-125, 7, 0.175, r"$Q = {0} + {1}*a + {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a81[2], a81[0], \
+  ax.text(-70, 0, 0.35, r"$Q = {0} + {1}*a + {2}*v + e$" "\n" r"$R^{3} = {4}$".format(a81[2], a81[0], \
       a81[1], 2, r_squared81))
  
   # Set the default viewing position for 3D plot
   ax.view_init(elev = 14, azim = -49)
 
   # Save Plot
-  plt.savefig('./plots/3D_runoff_ratio_SD')
+  plt.savefig('./plots/3D_runoff_ratio_SD2')
 
   # plt.show()
 
