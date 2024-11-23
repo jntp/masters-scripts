@@ -184,6 +184,33 @@ def get_netcdf_prcp(year, month, day, start_hour, end_hour):
   prcp = np.add(prcp1, prcp2)
   return prcp, prcp_hours, lats, lons
 
+def get_climate_prcp(years):
+  # Get precipitation and add to an aggregate precip variable (prcps)
+  for year, i in enumerate(years):
+    # Load NEXRAD data from netcdf file
+    climo_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/Daymet/daymet_v4_prcp_annttl_na_" + year + ".nc" 
+    climo_data = Dataset(climo_fp, mode = 'r')
+
+    # Specify SoCal spatial bounds in climatology file
+    y_climo = climo_data['y'][:]
+    x_climo = climo_data['x'][:]
+    y_bounds, x_bounds = get_spatial_bounds(y_climo, x_climo)
+
+    # Set the aggregate precipitation (prcps) simply to the precip data if this is the first year 
+    if i == 0:
+      prcps = climo_data['prcp'][1, y_bounds, x_bounds]
+
+    # Find the precipitation from the climatology file and add it to aggregate precipitation (prcps)
+    prcp = climo_data['prcp'][1, y_bounds, x_bounds]
+
+    prcps += prcp
+
+  # Divide the total number of years to obtain the average precipitation
+  avg_prcp = prcps / len(years)
+
+  return avg_prcp
+
+
 ## Plotting Functions
 
 # Create a base map to diplay QPE data
@@ -203,19 +230,11 @@ def new_map(fig, lon, lat):
 
 def main():  
   ## Get precipitation climatology; will be used to calculate percent of normal precipitation
-  # Load NEXRAD data from netcdf4 file
-  climo_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/Daymet/sdat_climatology.nc"
-  climo_data = Dataset(climo_fp, mode = 'r')
-  print(climo_data)
+  # Write notes here
+  NCFR_years = np.arange(1995, 2021)
+  print(NCFR_years)
+  climo_prcp = get_climate_prcp(NCFR_years) # left off here; check if this code works
 
-  # Specify SoCal spatial bounds in climatology file
-  y_climo = climo_data['y'][:]
-  x_climo = climo_data['x'][:] 
-  y_bounds, x_bounds = get_spatial_bounds(y_climo, x_climo)
-
-  # Get the prcp data from climo_data netcdf file
-  climo_prcp = climo_data['Band1'][y_bounds, x_bounds]
- 
   ## Total Precipitation for all NCFR events
   # Load times from csv file
   ncfr_fp = "./data/NCFR_Catalog.csv" 
@@ -322,7 +341,7 @@ def main():
   ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
 
   # Save Plot
-  plt.savefig('./plots/QPE_mean_annual_precip')
+  # plt.savefig('./plots/QPE_mean_annual_precip')
 
   ## Percent of Normal Annual Precipitation
   # Create a new figure and map 
@@ -417,3 +436,5 @@ def main():
 
 if __name__ == '__main__':
   main()
+
+# Left off testing out the get_climate_prcp function (run to see if it works)
