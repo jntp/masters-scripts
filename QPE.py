@@ -186,9 +186,9 @@ def get_netcdf_prcp(year, month, day, start_hour, end_hour):
 
 def get_climate_prcp(years):
   # Get precipitation and add to an aggregate precip variable (prcps)
-  for year, i in enumerate(years):
+  for i, year in enumerate(years): 
     # Load NEXRAD data from netcdf file
-    climo_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/Daymet/daymet_v4_prcp_annttl_na_" + year + ".nc" 
+    climo_fp = "/media/jntp/D2BC15A1BC1580E1/NCFRs/Daymet/daymet_v4_prcp_annttl_na_" + str(year) + ".nc" 
     climo_data = Dataset(climo_fp, mode = 'r')
 
     # Specify SoCal spatial bounds in climatology file
@@ -198,10 +198,10 @@ def get_climate_prcp(years):
 
     # Set the aggregate precipitation (prcps) simply to the precip data if this is the first year 
     if i == 0:
-      prcps = climo_data['prcp'][1, y_bounds, x_bounds]
+      prcps = climo_data['prcp'][0, y_bounds, x_bounds]
 
     # Find the precipitation from the climatology file and add it to aggregate precipitation (prcps)
-    prcp = climo_data['prcp'][1, y_bounds, x_bounds]
+    prcp = climo_data['prcp'][0, y_bounds, x_bounds]
 
     prcps += prcp
 
@@ -231,9 +231,8 @@ def new_map(fig, lon, lat):
 def main():  
   ## Get precipitation climatology; will be used to calculate percent of normal precipitation
   # Write notes here
-  NCFR_years = np.arange(1995, 2021)
-  print(NCFR_years)
-  climo_prcp = get_climate_prcp(NCFR_years) # left off here; check if this code works
+  NCFR_years = np.arange(1995, 2021) # Create array of years ranging from 1995 to 2020
+  climo_prcp = get_climate_prcp(NCFR_years) # Get the annual avg precip in SoCal from 1995 to 2020
 
   ## Total Precipitation for all NCFR events
   # Load times from csv file
@@ -371,7 +370,7 @@ def main():
   ax.set_yticklabels([r"$32^\circ N$", r"$33^\circ N$", r"$34^\circ N$", r"$35^\circ N$", r"$36^\circ N$"])
 
   # Save Plot
-  # plt.savefig('./plots/QPE_percent_normal_precip_2')
+  # plt.savefig('./plots/QPE_percent_normal_precip_3')
 
   ## Average Rainfall Rate
   # Create a new figure and map 
@@ -436,5 +435,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
-# Left off testing out the get_climate_prcp function (run to see if it works)
